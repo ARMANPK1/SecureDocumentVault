@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SecureDocumentVault</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div class="container">
+  <h1>🔐 SecureDocumentVault</h1>
+  <p>আপনার ব্যক্তিগত ডকুমেন্ট নিরাপদে সংরক্ষণ করুন</p>
+
+  <div class="card">
+    <h2>Upload Document</h2>
+
+    <input type="file" id="fileInput">
+
+    <button onclick="uploadFile()">
+      Upload
+    </button>
+
+    <hr>
+
+    <h2>Uploaded Files</h2>
+
+    <ul id="fileList">
+    </ul>
+
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="script.js"></script>
+
+</body>
+</html>
