@@ -9,6 +9,8 @@ const supabase = window.supabase.createClient(
 );
 
 async function uploadFile() {
+  alert("Upload function চলছে");
+
   const fileInput = document.getElementById("fileInput");
 
   if (!fileInput.files.length) {
