@@ -52,3 +52,4 @@ async function loadFiles() {
 }
 
 loadFiles();
+alert("Script loaded");
