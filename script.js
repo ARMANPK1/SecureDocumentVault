@@ -1,8 +1,7 @@
 alert("script.js শুরু হয়েছে");
 
 const SUPABASE_URL = "https://hpmabasscvxobqjiaxya.supabase.co";
-const SUPABASE_ANON_KEY ="sb_publishable_67wH3R7N_KH-UF0CRyFgig_mLVcGN4E ";
-
+const SUPABASE_ANON_KEY ="sb_publishable_67wH3R7N_KH-UF0CRyFgig_mLVcGN4E";
 const supabase = window.supabase.createClient(
   SUPABASE_URL,
   SUPABASE_ANON_KEY
