@@ -1,13 +1,17 @@
 alert("script.js শুরু হয়েছে");
 
 const SUPABASE_URL = "https://hpmabasscvxobqjiaxya.supabase.co";
-const SUPABASE_ANON_KEY ="sb_publishable_67wH3R7N_KH-UF0CRyFgig_mLVcGN4E";
+
+const SUPABASE_ANON_KEY = "sb_publishable_Q6fekn1-CYNPC7kbjdX8zg_8-XUkcNB";
+
 const supabase = window.supabase.createClient(
   SUPABASE_URL,
   SUPABASE_ANON_KEY
 );
 
+
 async function uploadFile() {
+
   alert("Upload চাপা হয়েছে");
 
   const fileInput = document.getElementById("fileInput");
@@ -19,14 +23,51 @@ async function uploadFile() {
 
   const file = fileInput.files[0];
 
-  const { error } = await supabase.storage
+  const { data, error } = await supabase.storage
     .from("documents")
-    .upload(file.name, file, { upsert: true });
+    .upload(file.name, file, {
+      upsert: true
+    });
+
 
   if (error) {
     alert("Upload Failed: " + error.message);
-  } else {
+  } 
+  else {
     alert("✅ Upload সফল হয়েছে!");
     loadFiles();
   }
+
 }
+
+
+async function loadFiles(){
+
+  const { data, error } = await supabase.storage
+    .from("documents")
+    .list();
+
+
+  if(error){
+    alert(error.message);
+    return;
+  }
+
+
+  const list = document.getElementById("fileList");
+
+  list.innerHTML = "";
+
+  data.forEach(file => {
+
+    const li = document.createElement("li");
+    li.innerText = file.name;
+
+    list.appendChild(li);
+
+  });
+
+}
+
+
+loadFiles();
