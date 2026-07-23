@@ -6,12 +6,8 @@ const SUPABASE_ANON_KEY = "sb_publishable_Q6fekn1-CYNPC7kbjdX8zg_8-XUkcNB";
 const supabase = window.supabase.createClient(
   SUPABASE_URL,
   SUPABASE_ANON_KEY
-);
-
 async function uploadFile() {
   alert("Upload চাপা হয়েছে");
-
-  const fileInput = document.getElementById("fileInput");
 
   const fileInput = document.getElementById("fileInput");
 
@@ -35,26 +31,3 @@ async function uploadFile() {
     loadFiles();
   }
 }
-
-async function loadFiles() {
-  const fileList = document.getElementById("fileList");
-  fileList.innerHTML = "";
-
-  const { data, error } = await supabase.storage
-    .from("documents")
-    .list("");
-
-  if (error) {
-    console.log(error);
-    return;
-  }
-
-  data.forEach(file => {
-    const li = document.createElement("li");
-    li.textContent = file.name;
-    fileList.appendChild(li);
-  });
-}
-
-loadFiles();
-alert("Script loaded");
