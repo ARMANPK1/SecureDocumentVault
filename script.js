@@ -35,8 +35,8 @@ async function uploadFile() {
   }
 }
 
-async function loadFiles() {
-  const { data, error } = await supabase.storage
+ function loadFiles() {
+   { data, error } = await supabase.storage
     .from("DOCUMENTS")
     .list();
 
