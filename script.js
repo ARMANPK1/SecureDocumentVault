@@ -19,14 +19,12 @@ async function uploadFile() {
   }
 
   const file = fileInput.files[0];
-
-  const { data, error } = await supabase.storage
-    .from("documents")
-    .upload(file.name, file, {
-      upsert: true
-    });
-
-  if (error) {
+const { data, error } = await supabase.storage
+  .from("DOCUMENTS") // এখানে ছোট হাতের পরিবতে বড় হাতের দিন
+  .upload(file.name, file, {
+    upsert: true
+  });
+  if (if (error) {
     alert("Upload Failed: " + error.message);
   } else {
     alert("✅ Upload সফল হয়েছে!");
