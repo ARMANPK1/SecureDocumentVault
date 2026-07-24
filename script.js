@@ -19,12 +19,15 @@ async function uploadFile() {
   }
 
   const file = fileInput.files[0];
-const { data, error } = await supabase.storage
-  .from("DOCUMENTS") // এখানে ছোট হাতের পরিবতে বড় হাতের দিন
-  .upload(file.name, file, {
-    upsert: true
-  });
-  if (if (error) {
+
+  // Supabase বাককেটের বড় হাতের নামের সাথে মেলানোর জন্য DOCUMENTS দেওয়া হয়েছে
+  const { data, error } = await supabase.storage
+    .from("DOCUMENTS")
+    .upload(file.name, file, {
+      upsert: true
+    });
+
+  if (error) {
     alert("Upload Failed: " + error.message);
   } else {
     alert("✅ Upload সফল হয়েছে!");
@@ -34,7 +37,7 @@ const { data, error } = await supabase.storage
 
 async function loadFiles() {
   const { data, error } = await supabase.storage
-    .from("documents")
+    .from("DOCUMENTS")
     .list();
 
   if (error) {
@@ -47,7 +50,10 @@ async function loadFiles() {
 
   data.forEach(file => {
     const li = document.createElement("li");
-    li.innerText = file.name; // এখানে ঠিক করা হয়েছে
-    list.appendChild(li);      // লিস্টে উপাদান যোগ করার জন্য এটি জরুরি
+    li.innerText = file.name;
+    list.appendChild(li);
   });
-    }
+}
+
+// পেজ লোড হওয়ার সাথে সাথে ফাইল লিস্ট দেখানোর জন্য
+loadFiles();
