@@ -8,56 +8,30 @@
 </head>
 <body>
 
-<div class="container">
-  <h1>🔐 SecureDocumentVault</h1>
-  <p>আপনার ব্যক্তিগত ডকুমেন্ট নিরাপদে সংরক্ষণ করুন<
-<div id="login-container"><h2>লগ ইন করুন</h2><input type="email" id="emailInput" placeholder="ইমেল ঠিকানা"><input type="password" id="passwordInput" placeholder="পাসওয়ার্ড"><button onclick="executeLogin()">লগ ইন</button></div>
+  <div class="container">
+    <h1>SecureDocumentVault</h1>
+    <p>আপনার ব্যক্তিগত ডকুমেন্ট নিরাপদে সংরক্ষণ করুন</p>
 
-ner"&gt;&lt;h2&gt; লগ ইন
+    <!-- লগইন ফর্ম -->
+    <div id="login-container">
+      <h2>লগ ইন করুন</h2>
+      <input type="email" id="emailInput" placeholder="ইমেল ঠিকানা">
+      <input type="password" id="passwordInput" placeholder="পাসওয়ার্ড">
+      <button onclick="executeLogin()">লগ ইন</button>
+    </div>
 
-করুন&lt;/h2&gt;&lt;input
-
-type="email" id="emaillnput"
-
-placeholder="ইমেল
-
-ঠিকানা"&gt;&lt;input
-
-type="password" id="passwordinput" placehol der="পাসওয়ার্ড"&gt;&lt;button
-
-onclick="executeLogin()"&gt;লগ ইন&lt;/button&gt;&lt;/div&gt;`
-ner"&gt;&lt;h2&gt; লগ ইন
-
-করুন&lt;/h2&gt;&lt;input
-
-type="email" id="emaillnput"
-
-placeholder="ইমেল
-
-ঠিকানা"&gt;&lt;input
-
-type="password" id="passwordinput" placehol der="পাসওয়ার্ড"&gt;&lt;button
-
-onclick="executeLogin()"&gt;লগ ইন&lt;/button&gt;&lt;/div&gt;`
+    <!-- ফাইল আপলোড সেকশন -->
     <h2>Upload Document</h2>
-
     <input type="file" id="fileInput">
-
-    <button onclick="uploadFile()">
-      Upload
-    </button>
+    <button onclick="uploadFile()">Upload</button>
 
     <hr>
 
     <h2>Uploaded Files</h2>
-
     <ul id="fileList">
     </ul>
-
   </div>
-</div>
-  
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="script.js"></script>
+
 </body>
 </html>
+
