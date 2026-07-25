@@ -20,13 +20,12 @@ async function uploadFile() {
 
   const file = fileInput.files[0];
 
-  // Supabase বাককেটের বড় হাতের নামের সাথে মেলানোর জন্য DOCUMENTS দেওয়া হয়েছে
+// পরিবর্তন করে এটি দিন:
   const { data, error } = await supabase.storage
-    .from("DOCUMENTS")
+    .from("documents") // এখানে বড় হাতের DOCUMENTS এর বদলে ছোট হাতের documents দিন
     .upload(file.name, file, {
       upsert: true
     });
-
   if (error) {
     alert("Upload Failed: " + error.message);
   } else {
@@ -56,4 +55,4 @@ async function loadFiles() {
 }
 
 // পেজ লোড হওয়ার সাথে সাথে ফাইল লিস্ট দেখানোর জন্য
-loadFiles();
+loadFiles(.from("documents"));
