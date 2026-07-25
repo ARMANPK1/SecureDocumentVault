@@ -5,7 +5,7 @@ const SUPABASE_ANON_KEY = "sb_publishable_Q6fekn1-CYNPC7kbjdX8zg_8-XUkcNB";
 
 const supabase = window.supabase.createClient(
   SUPABASE_URL,
-  SUPABASE_ANON_KEY
+  
 );
 
 async function uploadFile() {
