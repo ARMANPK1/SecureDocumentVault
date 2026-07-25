@@ -55,4 +55,18 @@ async function loadFiles() {
 }
 
 // পেজ লোড হওয়ার সাথে সাথে ফাইল লিস্ট দেখানোর জন্য
-loadFiles(.from("documents");
+loadFiles
+async function login(email, password) {
+  const { data, error } = await supabase.auth.signInWithPassword({
+    email: email,
+    password: password,
+  });
+
+  if (error) {
+    console.error('Error logging in:', error.message);
+    alert('Failed to log in: ' + error.message);
+  } else {
+    console.log('Logged in successfully:', data);
+    alert('Logged in successfully!');
+  }
+  }
