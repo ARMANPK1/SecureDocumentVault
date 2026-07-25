@@ -55,4 +55,4 @@ async function loadFiles() {
 }
 
 // পেজ লোড হওয়ার সাথে সাথে ফাইল লিস্ট দেখানোর জন্য
-loadFiles(.from("documents"));
+loadFiles(.from("documents");
