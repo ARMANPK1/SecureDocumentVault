@@ -1,3 +1,4 @@
+alert("script.js loaded");
 // ================================
 // Secure Document Vault
 // Part 1
