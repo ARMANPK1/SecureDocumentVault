@@ -1,41 +1,49 @@
-<!DOCTYPE html>
-<html lang="bn">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Secure Document Vault</title>
-  <link rel="stylesheet" href="style.css">
-</head>
-<body>
+// 🔐 এখানে ফোল্ডারের আইডি, পাসওয়ার্ড এবং ফাইলের লিংকগুলো থাকবে
+const vaults = {
+  "folder1": {
+    name: "ফোল্ডার ১ - গোপন ফাইল",
+    password: "123", // 🔑 পাসওয়ার্ড
+    content: "<p>এখানে ফোল্ডার ১ এর তথ্য।</p><a href='https://example.com/file1.pdf' target='_blank'>📄 ফাইল ডাউনলোড করুন</a>"
+  },
+  "folder2": {
+    name: "ফোল্ডার ২ - ব্যক্তিগত ছবি",
+    password: "456", // 🔑 পাসওয়ার্ড
+    content: "<p>এখানে ফোল্ডার ২ এর তথ্য।</p><a href='https://example.com/file2.pdf' target='_blank'>📄 ফাইল ডাউনলোড করুন</a>"
+  },
+  "folder3": {
+    name: "ফোল্ডার ৩ - অফিসের তথ্য",
+    password: "789", // 🔑 পাসওয়ার্ড
+    content: "<p>এখানে ফোল্ডার ৩ এর তথ্য।</p><a href='https://example.com/file3.pdf' target='_blank'>📄 ফাইল ডাউনলোড করুন</a>"
+  }
+};
 
-  <div class="container">
-    <h1>Secure Document Vault</h1>
-    <p>আপনার ব্যক্তিগত ডকুমেন্ট নিরাপদে সংরক্ষণ করুন</p>
+// লিংক থেকে ফোল্ডার আইডি বের করা (?folder=folder1)
+const urlParams = new URLSearchParams(window.location.search);
+const currentFolderId = urlParams.get('folder') || 'folder1'; // ডিফল্ট ফোল্ডার ১
 
-    <!-- লগইন সেকশন -->
-    <div id="login-container">
-      <h2>লগ ইন করুন</h2>
-      <input type="email" id="emailInput" placeholder="ইমেল ঠিকানা">
-      <input type="password" id="passwordInput" placeholder="পাসওয়ার্ড">
-      <button type="button" onclick="executeLogin()">লগ ইন</button>
-    </div>
+// পেজ লোড হলে ফোল্ডারের নাম সেট করা
+const folderData = vaults[currentFolderId];
+if (folderData) {
+  document.getElementById('folderTitle').innerText = folderData.name;
+} else {
+  document.getElementById('folderTitle').innerText = "ফোল্ডার পাওয়া যায়নি!";
+}
 
-    <!-- ফাইল সেকশন -->
-    <h2>Upload Document</h2>
-    <input type="file" id="fileInput">
-    <button type="button" onclick="uploadFile()">Upload</button>
+// পাসওয়ার্ড মেলানোর ফাংশন
+function unlockFolder() {
+  const userPassword = document.getElementById('passInput').value;
 
-    <hr>
+  if (!folderData) {
+    alert("অকার্যকর ফোল্ডার লিংক!");
+    return;
+  }
 
-    <h2>Uploaded Files</h2>
-    <ul id="fileList"></ul>
-  </div>
-
-  <!-- ১. আগে Supabase CDN লাইব্রেরি -->
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  
-  <!-- ২. পরে আপনার script.js ফাইল -->
-  <script src="script.js"></script>
-
-</body>
-</html>না 
+  if (userPassword === folderData.password) {
+    alert("পাসওয়ার্ড সঠিক হয়েছে!");
+    document.getElementById('lockScreen').style.display = 'none';
+    document.getElementById('secretContent').style.display = 'block';
+    document.getElementById('folderDetails').innerHTML = folderData.content;
+  } else {
+    alert("❌ ভুল পাসওয়ার্ড! আবার চেষ্টা করুন।");
+  }
+}
