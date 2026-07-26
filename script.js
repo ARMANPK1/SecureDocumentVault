@@ -1,73 +1,41 @@
-alert("Script File is Working!");
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Secure Document Vault</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
 
-const SUPABASE_URL = "https://hpmabasscvxobqjiaxya.supabase.co";
-const SUPABASE_ANON_KEY = "sb_publishable_Q6fekn1-CYNPC7kbjdX8zg_8-XUkcNB";
+  <div class="container">
+    <h1>Secure Document Vault</h1>
+    <p>আপনার ব্যক্তিগত ডকুমেন্ট নিরাপদে সংরক্ষণ করুন</p>
 
-const supabase = window.supabase.createClient(
-  SUPABASE_URL,
+    <!-- লগইন সেকশন -->
+    <div id="login-container">
+      <h2>লগ ইন করুন</h2>
+      <input type="email" id="emailInput" placeholder="ইমেল ঠিকানা">
+      <input type="password" id="passwordInput" placeholder="পাসওয়ার্ড">
+      <button type="button" onclick="executeLogin()">লগ ইন</button>
+    </div>
+
+    <!-- ফাইল সেকশন -->
+    <h2>Upload Document</h2>
+    <input type="file" id="fileInput">
+    <button type="button" onclick="uploadFile()">Upload</button>
+
+    <hr>
+
+    <h2>Uploaded Files</h2>
+    <ul id="fileList"></ul>
+  </div>
+
+  <!-- ১. আগে Supabase CDN লাইব্রেরি -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   
-);
+  <!-- ২. পরে আপনার script.js ফাইল -->
+  <script src="script.js"></script>
 
-async function uploadFile() {
-  alert("Upload চাপা হয়েছে");
-
-  const fileInput = document.getElementById("fileInput");
-
-  if (!fileInput.files.length) {
-    alert("একটি ফাইল নির্বাচন করুন");
-    return;
-  }
-
-  const file = fileInput.files[0];
-
-// পরিবর্তন করে এটি দিন:
-  const { data, error } = await supabase.storage
-    .from("documents") // এখানে বড় হাতের DOCUMENTS এর বদলে ছোট হাতের documents দিন
-    .upload(file.name, file, {
-      upsert: true
-    });
-  if (error) {
-    alert("Upload Failed: " + error.message);
-  } else {
-    alert("✅ Upload সফল হয়েছে!");
-    loadFiles();
-  }
-}
-
-async function loadFiles() {
-  const { data, error } = await supabase.storage
-    .from("DOCUMENTS")
-    .list();
-
-  if (error) {
-    alert(error.message);
-    return;
-  }
-
-  const list = document.getElementById("fileList");
-  list.innerHTML = "";
-
-  data.forEach(file => {
-    const li = document.createElement("li");
-    li.innerText = file.name;
-    list.appendChild(li);
-  });
-}
-
-// পেজ লোড হওয়ার সাথে সাথে ফাইল লিস্ট দেখানোর জন্য
-loadFiles
-
-async function login(email, password) {
-  const { data, error } = await supabase.auth.signInWithPassword({
-    email: email,pakistan07026@gmail.com
-    password: password,arMan  0011
-  });
-
-  if (error) {
-    console.error('Error logging in:', error.message);
-    alert('Failed to log in: ' + error.message);
-  } else {
-    console.log('Logged in successfully:', data);
-    alert('Logged in successfully!');
-  }
-    }
+</body>
+</html>না 
