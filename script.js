@@ -59,8 +59,8 @@ loadFiles
 
 async function login(email, password) {
   const { data, error } = await supabase.auth.signInWithPassword({
-    email: email,
-    password: password,
+    email: email,pakistan07026@gmail.com
+    password: password,arMan  0011
   });
 
   if (error) {
