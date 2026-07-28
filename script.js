@@ -1,15 +1,13 @@
-alert("১");
+// তোমার Supabase তথ্য
+const SUPABASE_URL = "https://hpmabasscvxobqjiaxya.supabase.co";
 
-console.log(window.supabase);
+const SUPABASE_KEY = "sb_publishable_Q6fekn1-CYNPC7kbjdX8zg_8-XUkcNB";
 
-alert("২");
-
+// Supabase Client
 const supabase = window.supabase.createClient(
     SUPABASE_URL,
     SUPABASE_KEY
 );
-
-alert("৩");
 
 // তোমার Supabase তথ্য
 const SUPABASE_URL = "https://hpmabasscvxobqjiaxya.supabase.co";
