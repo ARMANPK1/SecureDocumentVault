@@ -1,3 +1,4 @@
+alert("JS শুরু হয়েছে");
 // SecureDocumentVault Script
 
 alert("Script Loaded");
