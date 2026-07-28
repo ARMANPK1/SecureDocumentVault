@@ -1,180 +1,161 @@
-// তোমার Supabase তথ্য
-const SUPABASE_URL = "https://hpmabasscvxobqjiaxya.supabase.co";
+// SecureDocumentVault Script
 
-const SUPABASE_KEY = "sb_publishable_Q6fekn1-CYNPC7kbjdX8zg_8-XUkcNB";
+alert("Script Loaded");
 
-// Supabase Client
-const supabase = window.supabase.createClient(
-    SUPABASE_URL,
-    SUPABASE_KEY
+
+const SUPABASE_URL = "আপনার_SUPABASE_URL";
+const SUPABASE_ANON_KEY = "আপনার_SUPABASE_ANON_KEY";
+
+
+const supabaseClient = supabase.createClient(
+  SUPABASE_URL,
+  SUPABASE_ANON_KEY
 );
 
-// তোমার Supabase তথ্য
-const SUPABASE_URL = "https://hpmabasscvxobqjiaxya.supabase.co";
 
-const SUPABASE_KEY = "sb_publishable_Q6fekn1-CYNPC7kbjdX8zg_8-XUkcNB";
-
-// Supabase Client
-const supabase = window.supabase.createClient(
-    SUPABASE_URL,
-    SUPABASE_KEY
-);
-
-// Bucket
-const BUCKET = "documents";
+// Vault Password
+const VAULT_PASSWORD = "123456";
 
 
-// Folder Configuration
+// Elements
+const lockBox = document.getElementById("lockBox");
+const vaultContent = document.getElementById("vaultContent");
 
-const vaults = {
+const passInput = document.getElementById("passInput");
+const unlockBtn = document.getElementById("unlockBtn");
 
-    folder1:{
+const errorMsg = document.getElementById("errorMsg");
 
-        name:"ব্যক্তিগত ডকুমেন্ট",
+const uploadBtn = document.getElementById("uploadBtn");
+const fileInput = document.getElementById("fileInput");
 
-        password:"123"
-
-    },
-
-    folder2:{
-
-        name:"ছবির ফোল্ডার",
-
-        password:"456"
-
-    },
-
-    folder3:{
-
-        name:"অফিস ডকুমেন্ট",
-
-        password:"789"
-
-    }
-
-};
+const fileList = document.getElementById("fileList");
 
 
-// URL থেকে Folder বের করা
 
-const params = new URLSearchParams(window.location.search);
+// Unlock Password
 
-const currentFolder = params.get("folder") || "folder1";
+unlockBtn.onclick = function(){
 
-const folder = vaults[currentFolder];
+  if(passInput.value === VAULT_PASSWORD){
 
-
-// Page Load
-
-window.onload = ()=>{
-
-    if(!folder){
-
-        document.getElementById("folderTitle").innerHTML="❌ Folder পাওয়া যায়নি";
-
-        return;
-
-    }
-
-    document.getElementById("folderTitle").innerHTML=folder.name;
-
-};
-// ================================
-// Part 2 - Unlock Folder & Load Files
-// ================================
-
-async function unlockFolder() {
-
-    const pass = document.getElementById("passInput").value;
-
-    if (!folder) {
-        alert("ফোল্ডার পাওয়া যায়নি");
-        return;
-    }
-
-    if (pass !== folder.password) {
-        alert("❌ ভুল পাসওয়ার্ড");
-        return;
-    }
-
-    document.getElementById("lockScreen").style.display = "none";
-    document.getElementById("secretContent").style.display = "block";
+    lockBox.style.display = "none";
+    vaultContent.style.display = "block";
 
     loadFiles();
 
-}
+  }
 
-async function loadFiles() {
+  else{
 
-    const container = document.getElementById("folderDetails");
+    errorMsg.innerHTML = "❌ ভুল Password";
 
-    container.innerHTML = "<p>লোড হচ্ছে...</p>";
+  }
 
-    const { data, error } = await supabase
-        .storage
-        .from(BUCKET)
-        .list("", {
-            limit: 100
-        });
+};
 
-    if (error) {
 
-        container.innerHTML =
-            "<p>❌ ফাইল লোড করা যায়নি</p>";
 
-        console.error(error);
 
-        return;
+// Upload File
 
-    }
+uploadBtn.onclick = async function(){
 
-    container.innerHTML = "";
+  const file = fileInput.files[0];
 
-    if (data.length === 0) {
 
-        container.innerHTML =
-            "<p>কোনো ফাইল পাওয়া যায়নি।</p>";
+  if(!file){
 
-        return;
+    alert("File নির্বাচন করুন");
+    return;
 
-    }
+  }
 
-    data.forEach(file => {
 
-        const url =
-`${SUPABASE_URL}/storage/v1/object/public/${BUCKET}/${file.name}`;
-
-        const card = document.createElement("div");
-
-        card.className = "file-card";
-
-        let preview = "";
-
-        if (file.name.endsWith(".jpg") ||
-            file.name.endsWith(".jpeg") ||
-            file.name.endsWith(".png") ||
-            file.name.endsWith(".webp")) {
-
-            preview =
-            `<img src="${url}" alt="${file.name}">`;
-
-        }
-
-        card.innerHTML = `
-            ${preview}
-
-            <h3>${file.name}</h3>
-
-            <a href="${url}" target="_blank">
-                📥 Download
-            </a>
-        `;
-
-        container.appendChild(card);
-
+  const {data, error} = await supabaseClient
+    .storage
+    .from("documents")
+    .upload(file.name, file, {
+      upsert:true
     });
 
-}
-window.unlockFolder = unlockFolder;
 
-console.log("unlockFolder ready");
+
+  if(error){
+
+    alert(error.message);
+
+  }
+
+  else{
+
+    alert("✅ File Upload হয়েছে");
+
+    loadFiles();
+
+  }
+
+
+};
+
+
+
+
+// Show Files
+
+async function loadFiles(){
+
+
+  fileList.innerHTML = "Loading...";
+
+
+  const {data, error} = await supabaseClient
+    .storage
+    .from("documents")
+    .list("");
+
+
+
+  if(error){
+
+    fileList.innerHTML = error.message;
+    return;
+
+  }
+
+
+
+  fileList.innerHTML = "";
+
+
+
+  data.forEach(file => {
+
+
+    const {data:urlData} =
+      supabaseClient
+      .storage
+      .from("documents")
+      .getPublicUrl(file.name);
+
+
+
+    fileList.innerHTML += `
+
+      <div class="fileItem">
+
+        <span>${file.name}</span>
+
+        <a href="${urlData.publicUrl}" target="_blank">
+        Open
+        </a>
+
+      </div>
+
+    `;
+
+
+  });
+
+
+}
