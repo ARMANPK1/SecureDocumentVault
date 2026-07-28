@@ -1,8 +1,15 @@
-alert("script.js loaded");
-// ================================
-// Secure Document Vault
-// Part 1
-// ================================
+alert("১");
+
+console.log(window.supabase);
+
+alert("২");
+
+const supabase = window.supabase.createClient(
+    SUPABASE_URL,
+    SUPABASE_KEY
+);
+
+alert("৩");
 
 // তোমার Supabase তথ্য
 const SUPABASE_URL = "https://hpmabasscvxobqjiaxya.supabase.co";
