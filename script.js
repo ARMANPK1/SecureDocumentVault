@@ -169,4 +169,7 @@ async function loadFiles() {
 
     });
 
-        }window.unlockFolder = unlockFolder;
+}
+window.unlockFolder = unlockFolder;
+
+console.log("unlockFolder ready");
