@@ -3,8 +3,8 @@
 alert("Script Loaded");
 
 
-const SUPABASE_URL = "আপনার_SUPABASE_URL";
-const SUPABASE_ANON_KEY = "আপনার_SUPABASE_ANON_KEY";
+const SUPABASE_URL = "আপনার_SUPABASE_URL";https://hpmabasscvxobqjiaxya.supabase.co
+const SUPABASE_ANON_KEY = "আপনার_SUPABASE_ANON_KEY";sb_publishable_Q6fekn1-CYNPC7kbjdX8zg_8-XUkcNB
 
 
 const supabaseClient = supabase.createClient(
