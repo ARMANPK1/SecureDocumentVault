@@ -2,8 +2,8 @@
 // ১. Supabase কনফিগারেশন সেটআপ
 // ==========================================
 // ⚠️ নিচে আপনার নিজের Supabase URL এবং Anon Key বসিয়ে দিন
-const SUPABASE_URL = "YOUR_SUPABASE_URL_HERE"; 
-const SUPABASE_KEY = "YOUR_SUPABASE_ANON_KEY_HERE";
+const SUPABASE_URL = "https://hpmabasscvxobqjiaxya.supabase.co"; 
+const SUPABASE_KEY = "sb_publishable_Q6fekn1-CYNPC7kbjdX8zg_8-XUkcNB";
 
 // Supabase ক্লায়েন্ট তৈরি
 const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
