@@ -66,7 +66,83 @@ uploadForm.addEventListener('submit', async (e) => {
                 }
             ]);
 
-        if (dbError) throw dbError;
+        // ==========================================
+// ২. ফাইল আপলোড ও QR Code জেনারেট করার লজিক (ডিবাগসহ)
+// ==========================================
+uploadForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    console.log("Submit button clicked!"); // কনসোলে চেক করার জন্য
+
+    const docName = docNameInput.value.trim();
+    const file = fileInput.files[0];
+
+    if (!file) {
+        alert("দয়া করে একটি ফাইল সিলেক্ট করুন!");
+        return;
+    }
+
+    const submitBtn = uploadForm.querySelector('button');
+    submitBtn.disabled = true;
+    submitBtn.innerText = "আপলোড হচ্ছে...";
+
+    try {
+        // ১. ফাইলের জন্য ইউনিক নাম তৈরি
+        const fileExt = file.name.split('.').pop();
+        const fileName = `${Date.now()}_${Math.random().toString(36).substring(7)}.${fileExt}`;
+        const filePath = `documents/${fileName}`;
+
+        console.log("Uploading to Storage...");
+        // ২. Supabase Storage-এ ফাইল আপলোড
+        const { data: storageData, error: storageError } = await supabase.storage
+            .from('vault-files')
+            .upload(filePath, file);
+
+        if (storageError) {
+            alert("Storage Error: " + storageError.message);
+            throw storageError;
+        }
+
+        console.log("Getting Public URL...");
+        // ৩. ফাইলের পাবলিক ইউআরএল সংগ্রহ করা
+        const { data: urlData } = supabase.storage
+            .from('vault-files')
+            .getPublicUrl(filePath);
+
+        const publicUrl = urlData.publicUrl;
+
+        console.log("Inserting to Database...");
+        // ৪. Supabase Database-এ তথ্য সেভ করা
+        const { error: dbError } = await supabase
+            .from('documents')
+            .insert([
+                { 
+                    title: docName, 
+                    file_url: publicUrl, 
+                    file_path: filePath 
+                }
+            ]);
+
+        if (dbError) {
+            alert("Database Error: " + dbError.message);
+            throw dbError;
+        }
+
+        alert("ফাইল সফলভাবে আপলোড হয়েছে!");
+
+        // ৫. QR Code জেনারেট করা
+        generateQRCode(publicUrl);
+
+        uploadForm.reset();
+        fetchUploadedFiles();
+
+    } catch (error) {
+        console.error("Full Error Details:", error);
+        alert("কোথাও সমস্যা হয়েছে: " + (error.message || JSON.stringify(error)));
+    } finally {
+        submitBtn.disabled = false;
+        submitBtn.innerText = "আপলোড করুন";
+    }
+});
 
         alert("ফাইল সফলভাবে আপলোড হয়েছে!");
 
