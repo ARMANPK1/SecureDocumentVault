@@ -1,7 +1,9 @@
-// Supabase কনফিগারেশন (এখানে আপনার নিজের Supabase URL ও Anon Key বসাবেন)
-const SUPABASE_URL = 'https://hpmabasscvxobqjiaxya.supabase.co
-const SUPABASE_ANON_KEY = 'sb_publishable_Q6fekn1-CYNPC7kbjdX8zg_8-XUkcNB
-const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+// Supabase কনফিগারেশন
+const SUPABASE_URL = 'https://hpmabasscvxobqjiaxya.supabase.co';
+const SUPABASE_ANON_KEY = 'sb_publishable_Q6fekn1-CYNPC7kbjdX8zg_8-XUkcNB';
+
+// Supabase ক্লায়েন্ট ইনিশিয়ালাইজ করা
+const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 const uploadForm = document.getElementById('upload-form');
 const docNameInput = document.getElementById('doc-name');
