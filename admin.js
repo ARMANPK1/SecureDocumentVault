@@ -26,7 +26,7 @@ uploadForm.addEventListener('submit', async (e) => {
     try {
         // ১. Supabase Storage-এ ফাইল আপলোড
         const filePath = `vault/${Date.now()}_${file.name}`;
-        const { data: uploadData, error: uploadError } = await supabase.storage
+        const { data: uploadData, error: uploadError } = await _supabase.storage
             .from('documents')
             .upload(filePath, file);
 
@@ -35,14 +35,14 @@ uploadForm.addEventListener('submit', async (e) => {
         }
 
         // ২. আপলোড করা ফাইলের পাবলিক লিংক নেওয়া
-        const { data: urlData } = supabase.storage
+        const { data: urlData } = _supabase.storage
             .from('documents')
             .getPublicUrl(filePath);
 
         const publicUrl = urlData.publicUrl;
 
         // ৩. Supabase Database Table-এ তথ্যাদি সেভ করা
-        const { data: dbData, error: dbError } = await supabase
+        const { data: dbData, error: dbError } = await _supabase
             .from('documents')
             .insert([{ title: docName, file_url: publicUrl }])
             .select()
