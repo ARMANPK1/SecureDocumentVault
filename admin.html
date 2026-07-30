@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Secure Vault Admin</title>
     <link rel="stylesheet" href="style.css">
+    <!-- Supabase JS Library -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
@@ -13,11 +14,11 @@
         <a href="index.html">User View</a>
         <h3>ফাইল আপলোড প্যানেল</h3>
         
-        <form id="uploadForm">
+        <form id="uploadForm" onsubmit="return false;">
             <input type="text" id="fileNameInput" placeholder="ডকুমেন্টের শিরোনাম/নাম" required><br><br>
             <input type="password" id="passcodeInput" placeholder="সিক্রেট পাসওয়ার্ড দিন" required><br><br>
             <input type="file" id="fileInput" required><br><br>
-            <button type="submit" id="uploadBtn">আপলোড করুন</button>
+            <button type="button" id="uploadBtn">আপলোড করুন</button>
         </form>
     </div>
 
