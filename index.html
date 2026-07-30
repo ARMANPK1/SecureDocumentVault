@@ -1,46 +1,33 @@
 <!DOCTYPE html>
 <html lang="bn">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Document Vault</title>
-  <link rel="stylesheet" href="style.css">
-  
-  <!-- Supabase CDN (সবার আগে থাকতে হবে) -->
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>সিকিউর ফাইল ভল্ট</title>
+    <link rel="stylesheet" href="style.css">
+    <!-- Supabase CDN JS Library -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
 
-  <div class="container" style="text-align:center; padding:30px; max-width:400px; margin:50px auto; border:1px solid #ddd; border-radius:10px;">
-    <h2>🔐 সিকিউর ফাইল ভল্ট</h2>
-    <p>ফাইলটি দেখতে সিক্রেট পাসওয়ার্ডটি লিখুন:</p>
+    <div class="container">
+        <h2>🔐 সিকিউর ফাইল ভল্ট</h2>
+        <p>ফাইলটি দেখতে সিক্রেট পাসওয়ার্ডটি লিখুন:</p>
 
-    <div style="margin: 20px 0;">
-      <input type="password" id="passcodeInput" placeholder="পাসওয়ার্ড লিখুন..." style="padding:12px; width:90%; border-radius:5px; border:1px solid #ccc;">
+        <form onsubmit="return false;">
+            <input type="password" id="passcodeInput" placeholder="পাসওয়ার্ড লিখুন...">
+            <button type="button" id="submitBtn">পাসওয়ার্ড যাচাই করুন</button>
+        </form>
+
+        <div id="fileContainer" style="display: none; margin-top: 20px;">
+            <div id="previewArea"></div>
+            <br>
+            <a id="downloadLink" href="#" class="btn-download" download>ফাইল ডাউনলোড করুন</a>
+        </div>
     </div>
 
-    <button id="submitBtn" style="padding:12px 25px; background:#28a745; color:#fff; border:none; border-radius:5px; cursor:pointer; font-weight:bold;">
-      পাসওয়ার্ড যাচাই করুন
-    <input type="password" id="passcodeInput" placeholder="পাসওয়ার্ড দিন">
-<button type="button" id="submitBtn">যাচাই করুন</button>
-
-<div id="fileContainer" style="display:none;">
-    <div id="previewArea"></div>
-    <a id="downloadLink" href="#" target="_blank">ডাউনলোড</a>
-</div>
-  
-    <button type="button" id="submitBtn">পাসওয়ার্ড যাচাই করুন</button>
-
-    <!-- রেজাল্ট এরিয়া -->
-    <div id="fileContainer" style="display:none; margin-top:25px;">
-      <h3>✅ আপনার ফাইল প্রস্তুত!</h3>
-      <div id="previewArea" style="margin:15px 0;"></div>
-      <a id="downloadLink" href="#" target="_blank" style="display:inline-block; padding:12px 20px; background:#007bff; color:#fff; text-decoration:none; border-radius:5px; font-weight:bold;">📥 ডাউনলোড করুন</a>
-    </div>
-  </div>
-
-  <!-- ফাইল সিকুয়েন্স সঠিক রাখা হয়েছে -->
-  <script src="config.js"></script>
-  <script src="script.js"></script>
+    <!-- JS Files Loading Sequence -->
+    <script src="config.js"></script>
+    <script src="script.js"></script>
 </body>
 </html>
