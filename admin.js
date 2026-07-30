@@ -1,46 +1,54 @@
-// DOM elements
-const loginForm = document.getElementById('loginForm');
-const emailInput = document.getElementById('emailInput');
-const passInput = document.getElementById('passInput');
-const loginBtn = document.getElementById('loginBtn');
-const errorMsg = document.getElementById('errorMsg');
+// Supabase Client Init
+const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-// Login Handler
-if (loginBtn) {
-    loginBtn.addEventListener('click', async (e) => {
-        e.preventDefault();
-        
-        const email = emailInput.value.trim();
-        const password = passInput.value.trim();
+const uploadForm = document.getElementById('uploadForm');
 
-        if (!email || !password) {
-            errorMsg.innerText = "ইমেইল এবং পাসওয়ার্ড উভয়ই প্রদান করুন!";
-            return;
-        }
+uploadForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    
+    const fileName = document.getElementById('fileNameInput').value.trim();
+    const passcode = document.getElementById('passcodeInput').value.trim();
+    const fileInput = document.getElementById('fileInput');
+    const file = fileInput.files[0];
 
-        errorMsg.innerText = "লগইন হচ্ছে...";
+    if (!file || !fileName || !passcode) {
+        alert('সবগুলো ঘর সঠিকভাবে পূরণ করুন!');
+        return;
+    }
 
-        try {
-            // Supabase Auth দিয়ে এডমিন লগইন
-            const { data, error } = await supabase.auth.signInWithPassword(...)
-                email: email,
-                password: password
-            });
+    const uploadBtn = document.getElementById('uploadBtn');
+    uploadBtn.innerText = 'আপলোড হচ্ছে...';
+    uploadBtn.disabled = true;
 
-            if (error) {
-                errorMsg.innerText = "ভুল ইমেইল বা পাসওয়ার্ড!";
-                console.error(error.message);
-                return;
-            }
+    try {
+        // ১. Storage Bucket-এ ফাইল আপলোড
+        const fileExt = file.name.split('.').pop();
+        const filePath = `${Date.now()}_${fileName}.${fileExt}`;
 
-            if (data.user) {
-                // লগইন সফল হলে ড্যাশবোর্ডে পাঠানো
-                window.location.href = 'dashboard.html';
-            }
+        const { data: storageData, error: storageError } = await supabaseClient
+            .storage
+            .from('vault-files')
+            .upload(filePath, file);
 
-        } catch (err) {
-            console.error(err);
-            errorMsg.innerText = "একটি সমস্যা হয়েছে, আবার চেষ্টা করুন।";
-        }
-    });
-}
+        if (storageError) throw storageError;
+
+        // ২. Database Table-এ ফাইল নাম ও পাসওয়ার্ড সেভ
+        const { data: dbData, error: dbError } = await supabaseClient
+            .from('vault_files')
+            .insert([
+                { file_path: filePath, passcode: passcode }
+            ]);
+
+        if (dbError) throw dbError;
+
+        alert('সফলভাবে ফাইল আপলোড ও পাসওয়ার্ড সেভ হয়েছে!');
+        uploadForm.reset();
+
+    } catch (err) {
+        alert('আপলোড ব্যর্থ হয়েছে: ' + err.message);
+        console.error(err);
+    } finally {
+        uploadBtn.innerText = 'আপলোড করুন';
+        uploadBtn.disabled = false;
+    }
+});
