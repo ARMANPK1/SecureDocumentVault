@@ -22,7 +22,7 @@ if (loginBtn) {
 
         try {
             // Supabase Auth দিয়ে এডমিন লগইন
-            const { data, error } = await _supabase.auth.signInWithPassword({
+            const { data, error } = await supabase.auth.signInWithPassword(...)
                 email: email,
                 password: password
             });
