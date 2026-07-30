@@ -1,4 +1,4 @@
-alert("JS শুরু হয়েছে");
+SUPABASEASEASE("JS শুরু হয়েছে");
 
 const SUPABASE_URL = "https://hpmabasscvxobqjiaxya.supabase.co";
 
