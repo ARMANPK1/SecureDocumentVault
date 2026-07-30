@@ -61,7 +61,6 @@ uploadBtn.onclick = async function(){
 
   const file = fileInput.files[0];
   document.addEventListener('DOMContentLoaded', () => {
-    // টেস্ট অ্যালার্ট (ফাইল কানেক্ট হয়েছে কি না নিশ্চিত করার জন্য)
     console.log("script.js successfully loaded");
 
     const urlParams = new URLSearchParams(window.location.search);
@@ -74,7 +73,11 @@ uploadBtn.onclick = async function(){
     const downloadLink = document.getElementById('downloadLink');
 
     if (submitBtn) {
-        submitBtn.addEventListener('click', async () => {
+        // এখানে (e) যোগ করা হয়েছে
+        submitBtn.addEventListener('click', async (e) => {
+            // পেজ যাতে রিফ্রেশ/উধাও না হয়ে যায় সেটির জন্য এই লাইনটি আবশ্যক
+            e.preventDefault();
+
             const inputPasscode = passcodeInput ? passcodeInput.value.trim() : '';
 
             // ১. পাসওয়ার্ড না দিলে অ্যালার্ট
