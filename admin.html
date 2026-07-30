@@ -3,42 +3,25 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Secure Document Vault - Admin Panel</title>
+    <title>Secure Vault Admin</title>
     <link rel="stylesheet" href="style.css">
-    
-    <!-- Supabase SDK & QRCode Library CDN -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 </head>
 <body>
     <div class="container">
-        <header>
-            <div class="logo">🔒 Secure Vault Admin</div>
-            <a href="index.html" class="admin-link">User View</a>
-        </header>
-
-        <main class="card">
-            <h2>ফাইল আপলোড প্যানেল</h2>
-            
-            <form id="upload-form">
-                <input type="text" id="doc-name" placeholder="ডকুমেন্টের শিরোনাম/নাম" required>
-                <input type="file" id="file-input" required>
-                <button type="submit" class="btn">আপলোড করুন</button>
-            </form>
-
-            <!-- আপলোড করা ফাইলের তালিকা -->
-            <div id="fileList" style="margin-top: 20px; text-align: left;"></div>
-
-            <!-- জেনারেট হওয়া QR কোড দেখানোর জায়গা -->
-            <div id="qr-result" style="display: none; margin-top: 25px;">
-                <h3>QR Code তৈরি হয়েছে!</h3>
-                <p>নিচের QR কোডটি স্ক্যান করে ফাইলটি দেখা যাবে:</p>
-                <div id="qrcode" style="margin: 15px auto; display: flex; justify-content: center;"></div>
-            </div>
-        </main>
+        <h2>🔒 Secure Vault Admin</h2>
+        <a href="index.html">User View</a>
+        <h3>ফাইল আপলোড প্যানেল</h3>
+        
+        <form id="uploadForm">
+            <input type="text" id="fileNameInput" placeholder="ডকুমেন্টের শিরোনাম/নাম" required><br><br>
+            <input type="password" id="passcodeInput" placeholder="সিক্রেট পাসওয়ার্ড দিন" required><br><br>
+            <input type="file" id="fileInput" required><br><br>
+            <button type="submit" id="uploadBtn">আপলোড করুন</button>
+        </form>
     </div>
 
-    <!-- JavaScript File Connection -->
+    <script src="config.js"></script>
     <script src="admin.js"></script>
 </body>
 </html>
