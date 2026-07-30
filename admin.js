@@ -1,10 +1,10 @@
-// Supabase Client Init
+// Supabase Client Initialization
 const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 const uploadForm = document.getElementById('uploadForm');
 
 uploadForm.addEventListener('submit', async (e) => {
-    e.preventDefault();
+    e.preventDefault(); // পেজ যেন রিফ্রেশ না হয়
     
     const fileName = document.getElementById('fileNameInput').value.trim();
     const passcode = document.getElementById('passcodeInput').value.trim();
@@ -12,7 +12,7 @@ uploadForm.addEventListener('submit', async (e) => {
     const file = fileInput.files[0];
 
     if (!file || !fileName || !passcode) {
-        alert('সবগুলো ঘর সঠিকভাবে পূরণ করুন!');
+        alert('অনুগ্রহ করে সবগুলো ঘর সঠিক তথ্য দিয়ে পূরণ করুন!');
         return;
     }
 
@@ -21,31 +21,39 @@ uploadForm.addEventListener('submit', async (e) => {
     uploadBtn.disabled = true;
 
     try {
-        // ১. Storage Bucket-এ ফাইল আপলোড
+        // ১. ফাইল আপলোড
         const fileExt = file.name.split('.').pop();
-        const filePath = `${Date.now()}_${fileName}.${fileExt}`;
+        const uniqueFileName = `${Date.now()}_${fileName}.${fileExt}`;
 
         const { data: storageData, error: storageError } = await supabaseClient
             .storage
             .from('vault-files')
-            .upload(filePath, file);
+            .upload(uniqueFileName, file);
 
-        if (storageError) throw storageError;
+        if (storageError) {
+            throw new Error('স্টোরেজে ফাইল আপলোড হতে পারেনি: ' + storageError.message);
+        }
 
-        // ২. Database Table-এ ফাইল নাম ও পাসওয়ার্ড সেভ
+        // ২. ডাটাবেসে সেভ করা
         const { data: dbData, error: dbError } = await supabaseClient
             .from('vault_files')
             .insert([
-                { file_path: filePath, passcode: passcode }
+                { 
+                    file_path: uniqueFileName, 
+                    passcode: passcode 
+                }
             ]);
 
-        if (dbError) throw dbError;
+        if (dbError) {
+            throw new Error('ডাটাবেসে সেভ হতে পারেনি: ' + dbError.message);
+        }
 
-        alert('সফলভাবে ফাইল আপলোড ও পাসওয়ার্ড সেভ হয়েছে!');
+        alert('🎉 দারুণ! ফাইল ও সিক্রেট পাসওয়ার্ড সফলভাবে আপলোড হয়েছে!');
         uploadForm.reset();
 
     } catch (err) {
-        alert('আপলোড ব্যর্থ হয়েছে: ' + err.message);
+        // যদি কোনো ভুল হয়, স্পষ্ট পপআপ মেসেজে লিখে দিবে সমস্যা কোথায়!
+        alert('⚠️ আপলোড ব্যর্থ হয়েছে:\n' + err.message);
         console.error(err);
     } finally {
         uploadBtn.innerText = 'আপলোড করুন';
