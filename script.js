@@ -1,3 +1,5 @@
+alert("Script File Connected Successfully!");
+
 SUPABASEASEASE("JS শুরু হয়েছে");
 
 const SUPABASE_URL = "https://hpmabasscvxobqjiaxya.supabase.co";
