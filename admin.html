@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Secure Vault Admin</title>
     <link rel="stylesheet" href="style.css">
-    <!-- Supabase JS Library -->
+    <!-- Supabase Library -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
@@ -22,7 +22,76 @@
         </form>
     </div>
 
+    <!-- config.js ফাইলটি এখানে লোড হচ্ছে -->
     <script src="config.js"></script>
-    <script src="admin.js"></script>
+
+    <script>
+        document.getElementById('uploadBtn').addEventListener('click', async () => {
+            // ১. Supabase ও Config চেক
+            if (typeof supabase === 'undefined') {
+                alert('⚠️ Supabase লাইব্রেরি লোড হয়নি! ইন্টারনেট কানেকশন চেক করুন।');
+                return;
+            }
+            if (typeof SUPABASE_URL === 'undefined' || typeof SUPABASE_ANON_KEY === 'undefined') {
+                alert('⚠️ config.js ফাইলে SUPABASE_URL বা SUPABASE_ANON_KEY পাওয়া যায়নি!');
+                return;
+            }
+
+            const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+            
+            const fileName = document.getElementById('fileNameInput').value.trim();
+            const passcode = document.getElementById('passcodeInput').value.trim();
+            const fileInput = document.getElementById('fileInput');
+            const file = fileInput.files[0];
+
+            if (!file || !fileName || !passcode) {
+                alert('⚠️ অনুগ্রহ করে সবগুলো ঘর পূরণ করুন!');
+                return;
+            }
+
+            const uploadBtn = document.getElementById('uploadBtn');
+            uploadBtn.innerText = 'আপলোড হচ্ছে...';
+            uploadBtn.disabled = true;
+
+            try {
+                // ২. Storage Bucket-এ ফাইল আপলোড
+                const fileExt = file.name.split('.').pop();
+                const uniqueFileName = `${Date.now()}_${fileName}.${fileExt}`;
+
+                const { data: storageData, error: storageError } = await supabaseClient
+                    .storage
+                    .from('vault-files')
+                    .upload(uniqueFileName, file);
+
+                if (storageError) {
+                    throw new Error('স্টোরেজ এরর: ' + storageError.message);
+                }
+
+                // ৩. Database-এ ডেটা সেভ
+                const { data: dbData, error: dbError } = await supabaseClient
+                    .from('vault_files')
+                    .insert([
+                        { 
+                            file_path: uniqueFileName, 
+                            passcode: passcode 
+                        }
+                    ]);
+
+                if (dbError) {
+                    throw new Error('ডাটাবেস এরর: ' + dbError.message);
+                }
+
+                alert('🎉 সফলভাবে ফাইল ও পাসওয়ার্ড সেভ হয়েছে!');
+                document.getElementById('uploadForm').reset();
+
+            } catch (err) {
+                alert('❌ ' + err.message);
+                console.error(err);
+            } finally {
+                uploadBtn.innerText = 'আপলোড করুন';
+                uploadBtn.disabled = false;
+            }
+        });
+    </script>
 </body>
 </html>
