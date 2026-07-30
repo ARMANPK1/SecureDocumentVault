@@ -1,62 +1,72 @@
-// Supabase Client Initialization
-const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-
-const uploadForm = document.getElementById('uploadForm');
-
-uploadForm.addEventListener('submit', async (e) => {
-    e.preventDefault(); // পেজ যেন রিফ্রেশ না হয়
-    
-    const fileName = document.getElementById('fileNameInput').value.trim();
-    const passcode = document.getElementById('passcodeInput').value.trim();
-    const fileInput = document.getElementById('fileInput');
-    const file = fileInput.files[0];
-
-    if (!file || !fileName || !passcode) {
-        alert('অনুগ্রহ করে সবগুলো ঘর সঠিক তথ্য দিয়ে পূরণ করুন!');
-        return;
-    }
-
+// admin.js
+document.addEventListener('DOMContentLoaded', () => {
     const uploadBtn = document.getElementById('uploadBtn');
-    uploadBtn.innerText = 'আপলোড হচ্ছে...';
-    uploadBtn.disabled = true;
 
-    try {
-        // ১. ফাইল আপলোড
-        const fileExt = file.name.split('.').pop();
-        const uniqueFileName = `${Date.now()}_${fileName}.${fileExt}`;
+    if (!uploadBtn) return;
 
-        const { data: storageData, error: storageError } = await supabaseClient
-            .storage
-            .from('vault-files')
-            .upload(uniqueFileName, file);
-
-        if (storageError) {
-            throw new Error('স্টোরেজে ফাইল আপলোড হতে পারেনি: ' + storageError.message);
+    uploadBtn.addEventListener('click', async () => {
+        // Supabase এবং config.js এর ভ্যারিয়েবল চেক
+        if (typeof supabase === 'undefined') {
+            alert('⚠️ Supabase লাইব্রেরি লোড হয়নি!');
+            return;
+        }
+        if (typeof SUPABASE_URL === 'undefined' || typeof SUPABASE_ANON_KEY === 'undefined') {
+            alert('⚠️ config.js ফাইল থেকে SUPABASE_URL বা SUPABASE_ANON_KEY পাওয়া যায়নি!');
+            return;
         }
 
-        // ২. ডাটাবেসে সেভ করা
-        const { data: dbData, error: dbError } = await supabaseClient
-            .from('vault_files')
-            .insert([
-                { 
-                    file_path: uniqueFileName, 
-                    passcode: passcode 
-                }
-            ]);
+        const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        
+        const fileName = document.getElementById('fileNameInput').value.trim();
+        const passcode = document.getElementById('passcodeInput').value.trim();
+        const fileInput = document.getElementById('fileInput');
+        const file = fileInput ? fileInput.files[0] : null;
 
-        if (dbError) {
-            throw new Error('ডাটাবেসে সেভ হতে পারেনি: ' + dbError.message);
+        if (!file || !fileName || !passcode) {
+            alert('⚠️ অনুগ্রহ করে সবগুলো ঘর পূরণ করুন এবং ফাইল নির্বাচন করুন!');
+            return;
         }
 
-        alert('🎉 দারুণ! ফাইল ও সিক্রেট পাসওয়ার্ড সফলভাবে আপলোড হয়েছে!');
-        uploadForm.reset();
+        uploadBtn.innerText = 'আপলোড হচ্ছে...';
+        uploadBtn.disabled = true;
 
-    } catch (err) {
-        // যদি কোনো ভুল হয়, স্পষ্ট পপআপ মেসেজে লিখে দিবে সমস্যা কোথায়!
-        alert('⚠️ আপলোড ব্যর্থ হয়েছে:\n' + err.message);
-        console.error(err);
-    } finally {
-        uploadBtn.innerText = 'আপলোড করুন';
-        uploadBtn.disabled = false;
-    }
+        try {
+            // ১. Storage Bucket-এ ফাইল আপলোড
+            const fileExt = file.name.split('.').pop();
+            const uniqueFileName = `${Date.now()}_${fileName}.${fileExt}`;
+
+            const { data: storageData, error: storageError } = await supabaseClient
+                .storage
+                .from('vault-files')
+                .upload(uniqueFileName, file);
+
+            if (storageError) {
+                throw new Error('স্টোরেজ এরর: ' + storageError.message);
+            }
+
+            // ২. Database-এ ডেটা সেভ
+            const { data: dbData, error: dbError } = await supabaseClient
+                .from('vault_files')
+                .insert([
+                    { 
+                        file_path: uniqueFileName, 
+                        passcode: passcode 
+                    }
+                ]);
+
+            if (dbError) {
+                throw new Error('ডাটাবেস এরর: ' + dbError.message);
+            }
+
+            alert('🎉 সফলভাবে ফাইল ও পাসওয়ার্ড সেভ হয়েছে!');
+            document.getElementById('uploadForm').reset();
+
+        } catch (err) {
+            alert('❌ ' + err.message);
+            console.error(err);
+        } finally {
+            uploadBtn.innerText = 'আপলোড করুন';
+            uploadBtn.disabled = false;
+        }
+    });
 });
