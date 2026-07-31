@@ -1,72 +1,105 @@
-// admin.js
+// Line 1: Settings & Admin Master Password
+const ADMIN_MASTER_PASS = "Admin@2026#Vault"; // 🔑 এটি আপনার এডমিন লগইন পাসওয়ার্ড
+
+// Line 4: Admin Login Logic
 document.addEventListener('DOMContentLoaded', () => {
-    const uploadBtn = document.getElementById('uploadBtn');
+    const loginBtn = document.getElementById('admin-login-btn') || document.getElementById('loginBtn');
+    
+    if (loginBtn) {
+        loginBtn.addEventListener('click', () => {
+            const inputPass = document.getElementById('admin-pass').value;
+            const msg = document.getElementById('admin-login-msg');
 
-    if (!uploadBtn) return;
+            if (inputPass === ADMIN_MASTER_PASS) {
+                document.getElementById('admin-login-sec').classList.add('hidden');
+                document.getElementById('admin-panel-sec').classList.remove('hidden');
+            } else {
+                if (msg) msg.textContent = "ভুল এডমিন পাসওয়ার্ড!";
+                else alert("ভুল এডমিন পাসওয়ার্ড!");
+            }
+        });
+    }
 
-    uploadBtn.addEventListener('click', async () => {
-        // Supabase এবং config.js এর ভ্যারিয়েবল চেক
-        if (typeof supabase === 'undefined') {
-            alert('⚠️ Supabase লাইব্রেরি লোড হয়নি!');
-            return;
-        }
-        if (typeof SUPABASE_URL === 'undefined' || typeof SUPABASE_ANON_KEY === 'undefined') {
-            alert('⚠️ config.js ফাইল থেকে SUPABASE_URL বা SUPABASE_ANON_KEY পাওয়া যায়নি!');
-            return;
-        }
+    // Line 22: Upload & Short QR Logic
+    const uploadBtn = document.getElementById('upload-btn') || document.getElementById('uploadBtn');
 
-        const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-        
-        const fileName = document.getElementById('fileNameInput').value.trim();
-        const passcode = document.getElementById('passcodeInput').value.trim();
-        const fileInput = document.getElementById('fileInput');
-        const file = fileInput ? fileInput.files[0] : null;
+    if (uploadBtn) {
+        uploadBtn.addEventListener('click', async () => {
+            // Supabase Initialization Check
+            if (typeof supabase === 'undefined' || typeof SUPABASE_URL === 'undefined') {
+                alert('⚠️ config.js ফাইল বা Supabase লাইব্রেরি সঠিকভাবে লোড হয়নি!');
+                return;
+            }
 
-        if (!file || !fileName || !passcode) {
-            alert('⚠️ অনুগ্রহ করে সবগুলো ঘর পূরণ করুন এবং ফাইল নির্বাচন করুন!');
-            return;
-        }
+            const fileInput = document.getElementById('upload-file') || document.getElementById('fileNameInput');
+            const passInput = document.getElementById('set-file-pass') || document.getElementById('passcodeInput');
+            const msg = document.getElementById('upload-msg');
 
-        uploadBtn.innerText = 'আপলোড হচ্ছে...';
-        uploadBtn.disabled = true;
+            if (!fileInput || fileInput.files.length === 0 || !passInput.value.trim()) {
+                alert("⚠️ একটি ফাইল নির্বাচন করুন এবং কাস্টমার পাসওয়ার্ড দিন!");
+                return;
+            }
 
-        try {
-            // ১. Storage Bucket-এ ফাইল আপলোড
-            const fileExt = file.name.split('.').pop();
-            const uniqueFileName = `${Date.now()}_${fileName}.${fileExt}`;
+            const file = fileInput.files[0];
+            const passcode = passInput.value.trim();
+            const fileId = "doc_" + Math.random().toString(36).substring(2, 7);
+            const filePath = `vault_files/${fileId}_${file.name}`;
 
-            const { data: storageData, error: storageError } = await supabaseClient
-                .storage
-                .from('vault-files')
-                .upload(uniqueFileName, file);
+            if (msg) msg.textContent = "Uploading file, please wait...";
+
+            // 1. Upload file to Supabase Storage
+            const { data: storageData, error: storageError } = await _supabase.storage
+                .from('vault-bucket')
+                .upload(filePath, file);
 
             if (storageError) {
-                throw new Error('স্টোরেজ এরর: ' + storageError.message);
+                if (msg) msg.textContent = "Upload Failed: " + storageError.message;
+                return;
             }
 
-            // ২. Database-এ ডেটা সেভ
-            const { data: dbData, error: dbError } = await supabaseClient
-                .from('vault_files')
-                .insert([
-                    { 
-                        file_path: uniqueFileName, 
-                        passcode: passcode 
-                    }
-                ]);
+            // 2. Get Public URL
+            const { data: urlData } = _supabase.storage.from('vault-bucket').getPublicUrl(filePath);
+            const publicUrl = urlData.publicUrl;
+
+            // 3. Save entry to Database
+            const { error: dbError } = await _supabase.from('documents').insert([
+                { file_id: fileId, file_name: file.name, file_url: publicUrl, password: passcode }
+            ]);
 
             if (dbError) {
-                throw new Error('ডাটাবেস এরর: ' + dbError.message);
+                if (msg) msg.textContent = "DB Error: " + dbError.message;
+                return;
             }
 
-            alert('🎉 সফলভাবে ফাইল ও পাসওয়ার্ড সেভ হয়েছে!');
-            document.getElementById('uploadForm').reset();
+            if (msg) msg.textContent = "✅ ফাইল সফলভাবে আপলোড হয়েছে!";
 
-        } catch (err) {
-            alert('❌ ' + err.message);
-            console.error(err);
-        } finally {
-            uploadBtn.innerText = 'আপলোড করুন';
-            uploadBtn.disabled = false;
-        }
-    });
+            // 4. Create Short Link (TinyURL)
+            const fullUrl = `${window.location.origin}/index.html?id=${fileId}`;
+            let shortUrl = fullUrl;
+
+            try {
+                const res = await fetch(`https://tinyurl.com/api-create.php?url=${encodeURIComponent(fullUrl)}`);
+                if (res.ok) {
+                    shortUrl = await res.text();
+                }
+            } catch (e) {
+                console.log("Using full URL.");
+            }
+
+            // 5. Generate QR Code
+            const qrResult = document.getElementById('qr-result');
+            if (qrResult) qrResult.classList.remove('hidden');
+            
+            const genUrlDisplay = document.getElementById('generated-url');
+            if (genUrlDisplay) genUrlDisplay.textContent = shortUrl;
+
+            const qrContainer = document.getElementById('qrcode');
+            if (qrContainer && typeof qrcode !== 'undefined') {
+                const qr = qrcode(0, 'M');
+                qr.addData(shortUrl);
+                qr.make();
+                qrContainer.innerHTML = qr.createImgTag(5);
+            }
+        });
+    }
 });
