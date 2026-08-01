@@ -49,7 +49,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             // 1. Upload file to Supabase Storage
             const { data: storageData, error: storageError } = await _supabase.storage
-                .from('vault-bucket')
+                .storage(.from.vault-bucket')
                 .upload(filePath, file);
 
             if (storageError) {
