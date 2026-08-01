@@ -7,3 +7,4 @@
 - CSS3
 - JavaScript (ES6+)
 - Supabase (Authentication & Storage)
+ 
