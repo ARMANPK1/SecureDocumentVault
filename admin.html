@@ -7,6 +7,11 @@
     <link rel="stylesheet" href="style.css">
     <!-- Supabase Library -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        /* QR Box Styling */
+        #qrResult { margin-top: 20px; padding: 15px; border-top: 2px dashed #ccc; text-align: center; }
+        #qrcode img { display: block; margin: 10px auto; }
+    </style>
 </head>
 <body>
     <div class="container">
@@ -20,10 +25,24 @@
             <input type="file" id="fileInput" required><br><br>
             <button type="button" id="uploadBtn">আপলোড করুন</button>
         </form>
-    </div>
-<script src="config.js"></script>
-<script src="admin.js"></script>
 
+        <!-- QR Code এবং Link দেখানোর বক্স (নতুন যোগ করা হয়েছে) -->
+        <div id="qrResult" style="display: none;">
+            <h4>🎉 ফাইল তৈরি সফল হয়েছে!</h4>
+            <p style="font-size: 12px; color: #555;">ডাউনলোড লিংক:</p>
+            <p id="fileLinkDisplay" style="word-break: break-all; color: #0066cc; font-weight: bold;"></p>
+            <p style="margin-top: 10px;">QR Code:</p>
+            <div id="qrcode"></div>
+        </div>
+    </div>
+
+    <!-- 1. Config First -->
+    <script src="config.js"></script>
+
+    <!-- 2. QR Code Generator Library (নতুন যোগ করা হয়েছে) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js"></script>
+
+    <!-- 3. Upload & Dynamic QR Code Logic -->
     <script>
         document.getElementById('uploadBtn').addEventListener('click', async () => {
             // ১. Supabase ও Config চেক
@@ -53,13 +72,13 @@
             uploadBtn.disabled = true;
 
             try {
-                // ২. Storage Bucket-এ ফাইল আপলোড
+                // ২. Storage Bucket-এ ফাইল আপলোড (এখানে আপনার বাকেটের নাম vault-bucket অনুযায়ী মিলিয়ে নিতে পারেন)
                 const fileExt = file.name.split('.').pop();
                 const uniqueFileName = `${Date.now()}_${fileName}.${fileExt}`;
 
                 const { data: storageData, error: storageError } = await supabaseClient
                     .storage
-                    .from('vault-files')
+                    .from('vault-bucket') // আপনার বাকেট নাম vault-bucket থাকলে এটি দিন
                     .upload(uniqueFileName, file);
 
                 if (storageError) {
@@ -68,11 +87,12 @@
 
                 // ৩. Database-এ ডেটা সেভ
                 const { data: dbData, error: dbError } = await supabaseClient
-                    .from('vault_files')
+                    .from('documents')
                     .insert([
                         { 
+                            file_name: fileName,
                             file_path: uniqueFileName, 
-                            passcode: passcode 
+                            password: passcode 
                         }
                     ]);
 
@@ -80,7 +100,24 @@
                     throw new Error('ডাটাবেস এরর: ' + dbError.message);
                 }
 
-                alert('🎉 সফলভাবে ফাইল ও পাসওয়ার্ড সেভ হয়েছে!');
+                alert('🎉 সফলভাবে ফাইল আপলোড ও সেভ হয়েছে!');
+
+                // ৪. QR Code & Access Link তৈরি
+                const accessUrl = `${window.location.origin}/index.html?file=${encodeURIComponent(uniqueFileName)}`;
+                
+                document.getElementById('fileLinkDisplay').innerText = accessUrl;
+                
+                // QR Code তৈরি
+                const qrContainer = document.getElementById('qrcode');
+                qrContainer.innerHTML = "";
+                if (typeof qrcode !== 'undefined') {
+                    const qr = qrcode(0, 'M');
+                    qr.addData(accessUrl);
+                    qr.make();
+                    qrContainer.innerHTML = qr.createImgTag(5);
+                }
+
+                document.getElementById('qrResult').style.display = 'block';
                 document.getElementById('uploadForm').reset();
 
             } catch (err) {
@@ -92,13 +129,5 @@
             }
         });
     </script>
-    <!-- Supabase SDK -->
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js"></script>
-<!-- 1. Config First -->
-<script src="config.js"></script>
-
-<!-- 2. Admin Logic Second -->
-<script src="admin.js"></script>
 </body>
 </html>
