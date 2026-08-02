@@ -11,6 +11,18 @@
         /* QR Box Styling */
         #qrResult { margin-top: 20px; padding: 15px; border-top: 2px dashed #ccc; text-align: center; }
         #qrcode img { display: block; margin: 10px auto; }
+
+        /* Admin List Section Styling */
+        .admin-section { margin-top: 40px; border-top: 2px solid #ddd; padding-top: 20px; }
+        .refresh-btn { float: right; background-color: #0066cc; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; }
+        .refresh-btn:hover { background-color: #0052a3; }
+        .table-responsive { width: 100%; overflow-x: auto; margin-top: 15px; }
+        .vault-table { width: 100%; border-collapse: collapse; text-align: left; margin-top: 10px; }
+        .vault-table th, .vault-table td { border: 1px solid #ddd; padding: 10px; font-size: 14px; }
+        .vault-table th { background-color: #f4f4f4; }
+        .action-btn { padding: 5px 10px; font-size: 12px; border: none; border-radius: 3px; cursor: pointer; text-decoration: none; display: inline-block; }
+        .btn-view { background-color: #28a745; color: white; }
+        .btn-delete { background-color: #dc3545; color: white; margin-left: 5px; }
     </style>
 </head>
 <body>
@@ -26,7 +38,7 @@
             <button type="button" id="uploadBtn">আপলোড করুন</button>
         </form>
 
-        <!-- QR Code এবং Link দেখানোর বক্স (নতুন যোগ করা হয়েছে) -->
+        <!-- QR Code এবং Link দেখানোর বক্স -->
         <div id="qrResult" style="display: none;">
             <h4>🎉 ফাইল তৈরি সফল হয়েছে!</h4>
             <p style="font-size: 12px; color: #555;">ডাউনলোড লিংক:</p>
@@ -34,28 +46,57 @@
             <p style="margin-top: 10px;">QR Code:</p>
             <div id="qrcode"></div>
         </div>
+
+        <!-- 📂 নতুন যোগ করা হয়েছে: আপলোডকৃত ফাইল দেখার লিস্ট -->
+        <div class="admin-section">
+            <button class="refresh-btn" onclick="fetchFiles()">🔄 রিফ্রেশ করুন</button>
+            <h3>📂 আপলোডকৃত ফাইলের তালিকা</h3>
+            
+            <div class="table-responsive">
+                <table class="vault-table">
+                    <thead>
+                        <tr>
+                            <th>শিরোনাম</th>
+                            <th>ফাইলের পাথ</th>
+                            <th>পাসওয়ার্ড</th>
+                            <th>অ্যাকশন</th>
+                        </tr>
+                    </thead>
+                    <tbody id="fileListBody">
+                        <tr>
+                            <td colspan="4" style="text-align: center;">ডাটা লোড হচ্ছে...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
     </div>
 
     <!-- 1. Config First -->
     <script src="config.js"></script>
 
-    <!-- 2. QR Code Generator Library (নতুন যোগ করা হয়েছে) -->
+    <!-- 2. QR Code Generator Library -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js"></script>
 
-    <!-- 3. Upload & Dynamic QR Code Logic -->
+    <!-- 3. Upload, Dynamic QR Code & File Listing Logic -->
     <script>
-        document.getElementById('uploadBtn').addEventListener('click', async () => {
-            // ১. Supabase ও Config চেক
-            if (typeof supabase === 'undefined') {
-                alert('⚠️ Supabase লাইব্রেরি লোড হয়নি! ইন্টারনেট কানেকশন চেক করুন।');
-                return;
-            }
-            if (typeof SUPABASE_URL === 'undefined' || typeof SUPABASE_ANON_KEY === 'undefined') {
-                alert('⚠️ config.js ফাইলে SUPABASE_URL বা SUPABASE_ANON_KEY পাওয়া যায়নি!');
-                return;
-            }
+        // Global Supabase Client Initialization
+        let supabaseClient = null;
 
-            const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        function initSupabase() {
+            if (typeof supabase !== 'undefined' && typeof SUPABASE_URL !== 'undefined' && typeof SUPABASE_ANON_KEY !== 'undefined') {
+                supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+            }
+        }
+
+        // আপলোড লজিক
+        document.getElementById('uploadBtn').addEventListener('click', async () => {
+            if (!supabaseClient) initSupabase();
+
+            if (!supabaseClient) {
+                alert('⚠️ Supabase বা Config লোড হতে সমস্যা হয়েছে!');
+                return;
+            }
             
             const fileName = document.getElementById('fileNameInput').value.trim();
             const passcode = document.getElementById('passcodeInput').value.trim();
@@ -72,20 +113,20 @@
             uploadBtn.disabled = true;
 
             try {
-                // ২. Storage Bucket-এ ফাইল আপলোড (এখানে আপনার বাকেটের নাম vault-bucket অনুযায়ী মিলিয়ে নিতে পারেন)
                 const fileExt = file.name.split('.').pop();
                 const uniqueFileName = `${Date.now()}_${fileName}.${fileExt}`;
 
+                // ১. Storage Upload
                 const { data: storageData, error: storageError } = await supabaseClient
                     .storage
-                    .from('vault-bucket') // আপনার বাকেট নাম vault-bucket থাকলে এটি দিন
+                    .from('vault-bucket') 
                     .upload(uniqueFileName, file);
 
                 if (storageError) {
                     throw new Error('স্টোরেজ এরর: ' + storageError.message);
                 }
 
-                // ৩. Database-এ ডেটা সেভ
+                // ২. Database Insert
                 const { data: dbData, error: dbError } = await supabaseClient
                     .from('documents')
                     .insert([
@@ -102,12 +143,10 @@
 
                 alert('🎉 সফলভাবে ফাইল আপলোড ও সেভ হয়েছে!');
 
-                // ৪. QR Code & Access Link তৈরি
+                // QR Code Display
                 const accessUrl = `${window.location.origin}/index.html?file=${encodeURIComponent(uniqueFileName)}`;
-                
                 document.getElementById('fileLinkDisplay').innerText = accessUrl;
                 
-                // QR Code তৈরি
                 const qrContainer = document.getElementById('qrcode');
                 qrContainer.innerHTML = "";
                 if (typeof qrcode !== 'undefined') {
@@ -119,6 +158,9 @@
 
                 document.getElementById('qrResult').style.display = 'block';
                 document.getElementById('uploadForm').reset();
+                
+                // লিস্ট আপডেট করুন
+                fetchFiles();
 
             } catch (err) {
                 alert('❌ ' + err.message);
@@ -127,6 +169,86 @@
                 uploadBtn.innerText = 'আপলোড করুন';
                 uploadBtn.disabled = false;
             }
+        });
+
+        // 📂 ডাটাবেজ থেকে সব ফাইল টেনে আনার ফাংশন
+        async function fetchFiles() {
+            if (!supabaseClient) initSupabase();
+            const tableBody = document.getElementById('fileListBody');
+
+            if (!supabaseClient) {
+                tableBody.innerHTML = `<tr><td colspan="4" style="text-align: center; color: red;">Supabase কনফিগারেশন মিসিং!</td></tr>`;
+                return;
+            }
+
+            tableBody.innerHTML = `<tr><td colspan="4" style="text-align: center;">ডাটা রিফ্রেশ হচ্ছে...</td></tr>`;
+
+            const { data: documents, error } = await supabaseClient
+                .from('documents')
+                .select('*')
+                .order('id', { ascending: false });
+
+            if (error) {
+                tableBody.innerHTML = `<tr><td colspan="4" style="text-align: center; color: red;">এরর: ${error.message}</td></tr>`;
+                return;
+            }
+
+            if (documents.length === 0) {
+                tableBody.innerHTML = `<tr><td colspan="4" style="text-align: center;">কোনো ফাইল পাওয়া যায়নি।</td></tr>`;
+                return;
+            }
+
+            tableBody.innerHTML = "";
+            documents.forEach(doc => {
+                // Storage Public URL
+                const { data: urlData } = supabaseClient
+                    .storage
+                    .from('vault-bucket')
+                    .getPublicUrl(doc.file_path);
+
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td><b>${doc.file_name || 'N/A'}</b></td>
+                    <td style="font-size: 12px; font-family: monospace;">${doc.file_path}</td>
+                    <td><code>${doc.password || 'N/A'}</code></td>
+                    <td>
+                        <a href="${urlData.publicUrl}" target="_blank" class="action-btn btn-view">👁️ দেখুন</a>
+                        <button onclick="deleteFile('${doc.id}', '${doc.file_path}')" class="action-btn btn-delete">🗑️ ডিলিট</button>
+                    </td>
+                `;
+                tableBody.appendChild(row);
+            });
+        }
+
+        // 🗑️ ফাইল ডিলিট ফাংশন
+        async function deleteFile(id, filePath) {
+            if (!confirm("আপনি কি নিশ্চিত যে এই ফাইলটি মুছে ফেলতে চান?")) return;
+
+            if (!supabaseClient) initSupabase();
+
+            // ১. Storage থেকে মুছে ফেলা
+            if (filePath) {
+                await supabaseClient.storage.from('vault-bucket').remove([filePath]);
+            }
+
+            // ২. Database থেকে মুছে ফেলা
+            const { error } = await supabaseClient
+                .from('documents')
+                .delete()
+                .eq('id', id);
+
+            if (error) {
+                alert("ডিলিট করতে সমস্যা হয়েছে: " + error.message);
+            } else {
+                alert("ফাইলটি সফলভাবে ডিলিট করা হয়েছে!");
+                fetchFiles();
+            }
+        }
+
+        // পেজ লোড হলেই ডাটা লোড হবে
+        window.addEventListener('DOMContentLoaded', () => {
+            initSupabase();
+            fetchFiles();
         });
     </script>
 </body>
