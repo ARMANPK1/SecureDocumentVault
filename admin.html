@@ -210,7 +210,7 @@
                 row.innerHTML = `
                     <td><b>${doc.file_name || 'N/A'}</b></td>
                     <td style="font-size: 12px; font-family: monospace;">${doc.file_path}</td>
-                    <td><code>${doc.password || 'N/A'}</code></td>
+                    <td><code>${doc.passcode || 'N/A'}</code></td>
                     <td>
                         <a href="${urlData.publicUrl}" target="_blank" class="action-btn btn-view">👁️ দেখুন</a>
                         <button onclick="deleteFile('${doc.id}', '${doc.file_path}')" class="action-btn btn-delete">🗑️ ডিলিট</button>
