@@ -106,7 +106,7 @@
             }
 
             // ডাটাবেজের পাসওয়ার্ডের সাথে ইউজারের দেওয়া পাসওয়ার্ড মেলানো
-            if (enteredPassword === fileRecord.password) {
+            if (enteredPassword === fileRecord.passcode) {
                 // পাসওয়ার্ড সঠিক! এখন স্টোরেজ থেকে পাবলিক বা সাইনড ইউআরএল আনব
                 const { data: urlData } = supabaseClient
                     .storage
