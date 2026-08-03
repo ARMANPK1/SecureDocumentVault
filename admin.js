@@ -73,33 +73,35 @@ document.addEventListener('DOMContentLoaded', () => {
 
             if (msg) msg.textContent = "✅ ফাইল সফলভাবে আপলোড হয়েছে!";
 
-            // 4. Create Short Link (TinyURL)
-            const fullUrl = `${window.location.origin}/index.html?id=${fileId}`;
-            let shortUrl = fullUrl;
+            // 4. Create Full URL with File ID (Points to index.html)
+const fullUrl = `${window.location.origin}${window.location.pathname.replace('admin.html', 'index.html')}?file=${fileId}`;
+let shortUrl = fullUrl;
 
-            try {
-                const res = await fetch(`https://tinyurl.com/api-create.php?url=${encodeURIComponent(fullUrl)}`);
-                if (res.ok) {
-                    shortUrl = await res.text();
+try {
+  // Try generating a short URL using TinyURL API
+  const res = await fetch(`https://tinyurl.com/api-create.php?url=${encodeURIComponent(fullUrl)}`);
+  if (res.ok) {
+    shortUrl = await res.text();
+  }
+} catch (e) {
+  console.log("Using full URL instead of TinyURL.");
+}
+
+// 5. Generate QR Code
+const qrResult = document.getElementById('qr-result');
+if (qrResult) qrResult.classList.remove('hidden');
+
+const genUrlDisplay = document.getElementById('generated-url');
+if (genUrlDisplay) genUrlDisplay.textContent = shortUrl;
+
+const qrContainer = document.getElementById('qrcode');
+if (qrContainer && typeof qrcode !== 'undefined') {
+  qrContainer.innerHTML = ''; // Previous QR code clear
+  const qr = qrcode(0, 'M');
+  qr.addData(shortUrl);
+  qr.make();
+  qrContainer.innerHTML = qr.createImgTag(5);
                 }
-            } catch (e) {
-                console.log("Using full URL.");
-            }
-
-            // 5. Generate QR Code
-            const qrResult = document.getElementById('qr-result');
-            if (qrResult) qrResult.classList.remove('hidden');
-            
-            const genUrlDisplay = document.getElementById('generated-url');
-            if (genUrlDisplay) genUrlDisplay.textContent = shortUrl;
-
-            const qrContainer = document.getElementById('qrcode');
-            if (qrContainer && typeof qrcode !== 'undefined') {
-                const qr = qrcode(0, 'M');
-                qr.addData(shortUrl);
-                qr.make();
-                qrContainer.innerHTML = qr.createImgTag(5);
-            }
         });
     }
 });
