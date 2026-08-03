@@ -21,9 +21,11 @@
         .vault-table { width: 100%; border-collapse: collapse; text-align: left; margin-top: 10px; }
         .vault-table th, .vault-table td { border: 1px solid #ddd; padding: 10px; font-size: 14px; }
         .vault-table th { background-color: #f4f4f4; }
-        .action-btn { padding: 5px 10px; font-size: 12px; border: none; border-radius: 3px; cursor: pointer; text-decoration: none; display: inline-block; }
+        .action-btn { padding: 5px 8px; font-size: 12px; border: none; border-radius: 3px; cursor: pointer; text-decoration: none; display: inline-block; margin: 2px; }
         .btn-view { background-color: #28a745; color: white; }
-        .btn-delete { background-color: #dc3545; color: white; margin-left: 5px; }
+        .btn-qr { background-color: #17a2b8; color: white; }
+        .btn-edit { background-color: #ffc107; color: black; }
+        .btn-delete { background-color: #dc3545; color: white; }
     </style>
 </head>
 <body>
@@ -203,14 +205,21 @@
 
             tableBody.innerHTML = "";
             documents.forEach(doc => {
+                // Storage Public URL
+                const { data: urlData } = supabaseClient
+                    .storage
+                    .from('documents')
+                    .getPublicUrl(doc.file_path);
+
                 const row = document.createElement('tr');
                 row.innerHTML = `
                     <td><b>${doc.file_name || 'N/A'}</b></td>
                     <td style="font-size: 11px; font-family: monospace;">${doc.file_path}</td>
                     <td><code>${doc.password || 'N/A'}</code></td>
                     <td>
-                        <button onclick="editPassword('${doc.id}', '${doc.password}')" class="action-btn" style="background:#ffc107; color:black;">✏️ পাসওয়ার্ড</button>
-                        <button onclick="generateQRCode('${doc.file_path}')" class="action-btn btn-view">📱 QR কোড</button>
+                        <a href="${urlData.publicUrl}" target="_blank" class="action-btn btn-view">👁️ দেখুন</a>
+                        <button onclick="generateQRCode('${doc.file_path}')" class="action-btn btn-qr">📱 QR</button>
+                        <button onclick="editPassword('${doc.id}', '${doc.password}')" class="action-btn btn-edit">✏️ পাসওয়ার্ড</button>
                         <button onclick="deleteFile('${doc.id}', '${doc.file_path}')" class="action-btn btn-delete">🗑️ ডিলিট</button>
                     </td>
                 `;
