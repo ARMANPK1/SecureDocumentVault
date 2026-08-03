@@ -100,7 +100,7 @@ if (qrContainer && typeof qrcode !== 'undefined') {
   const qr = qrcode(0, 'M');
   qr.addData(shortUrl);
   qr.make();
-  qrContainer.innerHTML = qr.createImgTag(5);
+qrContainer.innerHTML = qr.createImgTag(5) + '<p>পাসওয়ার্ড: ' + passcode + '</p>';
                 }
         });
     }
