@@ -148,16 +148,23 @@
                 const accessUrl = `${window.location.origin}/index.html?file=${encodeURIComponent(uniqueFileName)}`;
                 document.getElementById('fileLinkDisplay').innerText = accessUrl;
                 
-                const qrContainer = document.getElementById('qrcode');
-                qrContainer.innerHTML = "";
-                if (typeof qrcode !== 'undefined') {
-                    const qr = qrcode(0, 'M');
-                    qr.addData(accessUrl);
-                    qr.make();
-                    qrContainer.innerHTML = qr.createImgTag(5);
-                }
+                function generateQRCode(filePath) {
+    // সরাসরি রিপোজিটরি নাম সহ পাবলিক URL
+    const accessUrl = `https://armanpk1.github.io/SecureDocumentVault/index.html?file=${encodeURIComponent(filePath)}`;
+    
+    document.getElementById('fileLinkDisplay').innerText = accessUrl;
+    
+    const qrContainer = document.getElementById('qrcode');
+    qrContainer.innerHTML = "";
+    if (typeof qrcode !== 'undefined') {
+        const qr = qrcode(0, 'M');
+        qr.addData(accessUrl);
+        qr.make();
+        qrContainer.innerHTML = qr.createImgTag(5);
+    }
 
-                document.getElementById('qrResult').style.display = 'block';
+    document.getElementById('qrResult').style.display = 'block';
+                }
                 document.getElementById('uploadForm').reset();
                 
                 // লিস্ট আপডেট করুন
