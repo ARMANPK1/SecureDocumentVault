@@ -169,10 +169,104 @@
             } finally {
                 uploadBtn.innerText = 'আপলোড করুন';
                 uploadBtn.disabled = false;
+// Global Supabase Client Initialization
+        let supabaseClient = null;
+
+        function initSupabase() {
+            if (typeof supabase !== 'undefined' && typeof SUPABASE_URL !== 'undefined' && typeof SUPABASE_ANON_KEY !== 'undefined') {
+                supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+            }
+        }
+
+        // ১. আপলোড লজিক (সঠিক Bucket ও Password সহ)
+        document.getElementById('uploadBtn').addEventListener('click', async () => {
+            if (!supabaseClient) initSupabase();
+
+            if (!supabaseClient) {
+                alert('⚠️ Supabase বা Config লোড হতে সমস্যা হয়েছে!');
+                return;
+            }
+            
+            const fileName = document.getElementById('fileNameInput').value.trim();
+            const passcode = document.getElementById('passcodeInput').value.trim();
+            const fileInput = document.getElementById('fileInput');
+            const file = fileInput.files[0];
+
+            if (!file || !fileName || !passcode) {
+                alert('⚠️ অনুগ্রহ করে সবগুলো ঘর পূরণ করুন!');
+                return;
+            }
+
+            const uploadBtn = document.getElementById('uploadBtn');
+            uploadBtn.innerText = 'আপলোড হচ্ছে...';
+            uploadBtn.disabled = true;
+
+            try {
+                const fileExt = file.name.split('.').pop();
+                const uniqueFileName = `${Date.now()}_${fileName}.${fileExt}`;
+
+                // ১. Storage Upload ('documents' bucket)
+                const { data: storageData, error: storageError } = await supabaseClient
+                    .storage
+                    .from('documents') 
+                    .upload(uniqueFileName, file);
+
+                if (storageError) {
+                    throw new Error('স্টোরেজ এরর: ' + storageError.message);
+                }
+
+                // ২. Database Insert ('password' column)
+                const { data: dbData, error: dbError } = await supabaseClient
+                    .from('documents')
+                    .insert([
+                        { 
+                            file_name: fileName,
+                            file_path: uniqueFileName, 
+                            password: passcode
+                        }
+                    ]);
+
+                if (dbError) {
+                    throw new Error('ডাটাবেস এরর: ' + dbError.message);
+                }
+
+                alert('🎉 সফলভাবে ফাইল আপলোড ও সেভ হয়েছে!');
+
+                // ৩. সঠিক QR Code Link তৈরি
+                generateQRCode(uniqueFileName);
+
+                document.getElementById('uploadForm').reset();
+                fetchFiles();
+
+            } catch (err) {
+                alert('❌ ' + err.message);
+                console.error(err);
+            } finally {
+                uploadBtn.innerText = 'আপলোড করুন';
+                uploadBtn.disabled = false;
             }
         });
 
-        // 📂 ডাটাবেজ থেকে সব ফাইল টেনে আনার ফাংশন
+        // QR Code তৈরির হেল্পার ফাংশন
+        function generateQRCode(filePath) {
+            const repoPath = window.location.pathname.substring(0, window.location.pathname.lastIndexOf('/'));
+            const accessUrl = `${window.location.origin}${repoPath}/index.html?file=${encodeURIComponent(filePath)}`;
+            
+            document.getElementById('fileLinkDisplay').innerText = accessUrl;
+            
+            const qrContainer = document.getElementById('qrcode');
+            qrContainer.innerHTML = "";
+            if (typeof qrcode !== 'undefined') {
+                const qr = qrcode(0, 'M');
+                qr.addData(accessUrl);
+                qr.make();
+                qrContainer.innerHTML = qr.createImgTag(5);
+            }
+
+            document.getElementById('qrResult').style.display = 'block';
+        }
+
+        // 📂 ২. ডাটাবেজ থেকে ফাইল তালিকা ও পাসওয়ার্ড পরিবর্তনের অপশন লোড
         async function fetchFiles() {
             if (!supabaseClient) initSupabase();
             const tableBody = document.getElementById('fileListBody');
@@ -201,19 +295,14 @@
 
             tableBody.innerHTML = "";
             documents.forEach(doc => {
-                // Storage Public URL
-                const { data: urlData } = supabaseClient
-                    .storage
-                    .from('vault-bucket')
-                    .getPublicUrl(doc.file_path);
-
                 const row = document.createElement('tr');
                 row.innerHTML = `
                     <td><b>${doc.file_name || 'N/A'}</b></td>
-                    <td style="font-size: 12px; font-family: monospace;">${doc.file_path}</td>
-                    <td><code>${doc.passcode || 'N/A'}</code></td>
+                    <td style="font-size: 11px; font-family: monospace;">${doc.file_path}</td>
+                    <td><code>${doc.password || 'N/A'}</code></td>
                     <td>
-                        <a href="${urlData.publicUrl}" target="_blank" class="action-btn btn-view">👁️ দেখুন</a>
+                        <button onclick="editPassword('${doc.id}', '${doc.password}')" class="action-btn" style="background:#ffc107; color:black;">✏️ পাসওয়ার্ড</button>
+                        <button onclick="generateQRCode('${doc.file_path}')" class="action-btn btn-view">📱 QR কোড</button>
                         <button onclick="deleteFile('${doc.id}', '${doc.file_path}')" class="action-btn btn-delete">🗑️ ডিলিট</button>
                     </td>
                 `;
@@ -221,18 +310,36 @@
             });
         }
 
-        // 🗑️ ফাইল ডিলিট ফাংশন
+        // ✏️ ৩. পাসওয়ার্ড পরিবর্তনের ফাংশন
+        async function editPassword(id, oldPassword) {
+            const newPassword = prompt("নতুন পাসওয়ার্ড লিখুন:", oldPassword);
+            if (!newPassword || newPassword === oldPassword) return;
+
+            if (!supabaseClient) initSupabase();
+
+            const { error } = await supabaseClient
+                .from('documents')
+                .update({ password: newPassword })
+                .eq('id', id);
+
+            if (error) {
+                alert("পাসওয়ার্ড আপডেট করতে সমস্যা: " + error.message);
+            } else {
+                alert("🎉 পাসওয়ার্ড সফলভাবে আপডেট করা হয়েছে!");
+                fetchFiles();
+            }
+        }
+
+        // 🗑️ ৪. ফাইল ডিলিট ফাংশন
         async function deleteFile(id, filePath) {
             if (!confirm("আপনি কি নিশ্চিত যে এই ফাইলটি মুছে ফেলতে চান?")) return;
 
             if (!supabaseClient) initSupabase();
 
-            // ১. Storage থেকে মুছে ফেলা
             if (filePath) {
-                await supabaseClient.storage.from('vault-bucket').remove([filePath]);
+                await supabaseClient.storage.from('documents').remove([filePath]);
             }
 
-            // ২. Database থেকে মুছে ফেলা
             const { error } = await supabaseClient
                 .from('documents')
                 .delete()
