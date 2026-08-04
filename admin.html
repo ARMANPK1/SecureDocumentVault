@@ -7,11 +7,11 @@
     <link rel="stylesheet" href="style.css">
     <!-- Supabase Library -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <!-- QR Code Library -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js"></script>
+    <!-- Canvas Based QR Code Library for Overlay Logo Support -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <style>
         #qrResult { margin-top: 20px; padding: 15px; border-top: 2px dashed #ccc; text-align: center; }
-        #qrcode img { display: block; margin: 10px auto; }
+        #qrCanvas { display: block; margin: 15px auto; border-radius: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.15); }
 
         /* Admin List Section Styling */
         .admin-section { margin-top: 40px; border-top: 2px solid #ddd; padding-top: 20px; }
@@ -47,7 +47,11 @@
             <p style="font-size: 12px; color: #555;">ডাউনলোড লিংক:</p>
             <p id="fileLinkDisplay" style="word-break: break-all; color: #0066cc; font-weight: bold;"></p>
             <p style="margin-top: 10px;">QR Code:</p>
-            <div id="qrcode"></div>
+            
+            <!-- কাস্টম লোগোসহ QR কোড ড্র করার ক্যানভাস -->
+            <canvas id="qrCanvas"></canvas>
+            <!-- হিডেন QR হোল্ডার -->
+            <div id="qrcodeTemp" style="display:none;"></div>
         </div>
 
         <!-- 📂 আপলোডকৃত ফাইল দেখার লিস্ট -->
@@ -80,7 +84,6 @@
 
     <!-- 2. Main Logic -->
     <script>
-        // Global Supabase Client Initialization
         let supabaseClient = null;
 
         function initSupabase() {
@@ -116,7 +119,7 @@
                 const fileExt = file.name.split('.').pop();
                 const uniqueFileName = `${Date.now()}_${fileName}.${fileExt}`;
 
-                // ১. Storage Upload ('documents' bucket)
+                // স্টোরেজ আপলোড
                 const { data: storageData, error: storageError } = await supabaseClient
                     .storage
                     .from('documents') 
@@ -126,7 +129,7 @@
                     throw new Error('স্টোরেজ এরর: ' + storageError.message);
                 }
 
-                // ২. Database Insert ('password' column)
+                // ডাটাবেস ইনসার্ট
                 const { data: dbData, error: dbError } = await supabaseClient
                     .from('documents')
                     .insert([
@@ -143,7 +146,7 @@
 
                 alert('🎉 সফলভাবে ফাইল আপলোড ও সেভ হয়েছে!');
 
-                // ৩. সঠিক QR Code তৈরি
+                // লোগোসহ QR তৈরি
                 generateQRCode(uniqueFileName);
 
                 document.getElementById('uploadForm').reset();
@@ -158,22 +161,62 @@
             }
         });
 
-        // ২. QR Code জেনারেট করার ফাংশন
+        // ২. অটোমেটিক সিকিউরিটি লোগোসহ QR Code জেনারেট করার ফাংশন
         function generateQRCode(filePath) {
             const accessUrl = `https://armanpk1.github.io/SecureDocumentVault/index.html?file=${encodeURIComponent(filePath)}`;
-            
             document.getElementById('fileLinkDisplay').innerText = accessUrl;
-            
-            const qrContainer = document.getElementById('qrcode');
-            qrContainer.innerHTML = "";
-            if (typeof qrcode !== 'undefined') {
-                const qr = qrcode(0, 'M');
-                qr.addData(accessUrl);
-                qr.make();
-                qrContainer.innerHTML = qr.createImgTag(5);
-            }
 
-            document.getElementById('qrResult').style.display = 'block';
+            const tempContainer = document.getElementById('qrcodeTemp');
+            tempContainer.innerHTML = "";
+
+            // ক্যানভাস প্রস্তুত করা
+            const mainCanvas = document.getElementById('qrCanvas');
+            const ctx = mainCanvas.getContext('2d');
+            const qrSize = 260;
+            mainCanvas.width = qrSize;
+            mainCanvas.height = qrSize;
+
+            // QRCode.js দিয়ে High Error Correction লেভেলে QR তৈরি
+            const qrcodeObj = new QRCode(tempContainer, {
+                text: accessUrl,
+                width: qrSize,
+                height: qrSize,
+                correctLevel: QRCode.CorrectLevel.H
+            });
+
+            setTimeout(() => {
+                const baseCanvas = tempContainer.querySelector('canvas');
+                if (!baseCanvas) return;
+
+                // ১. মূল ক্যানভাসে QR কোড আঁকা
+                ctx.drawImage(baseCanvas, 0, 0);
+
+                // ২. আপনার পাঠানো পুলিশ/সিকিউরিটি আইকনের নিখুঁত SVG ডেটা
+                const svgString = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><path fill="#000000" d="M256 0c-48.6 0-91.8 24.3-118 61.8L35 106.6C20.8 112 11.2 125.1 11.2 140.3c0 8.4 3 16.5 8.5 22.8l38.2 43.8c10.8 12.4 27.2 18.2 42.9 15.2l39.5-7.5c28 26.6 65.6 42.4 106.7 42.4s78.7-15.8 106.7-42.4l39.5 7.5c15.7 3 32.1-2.8 42.9-15.2l38.2-43.8c5.5-6.3 8.5-14.4 8.5-22.8 0-15.2-9.6-28.3-23.8-33.7l-103-44.8C347.8 24.3 304.6 0 256 0zm0 112c-44.2 0-80 35.8-80 80s35.8 80 80 80 80-35.8 80-80-35.8-80-80-80zm0 180c-88.4 0-160 53.7-160 120v40c0 11 9 20 20 20h280c11 0 20-9 20-20v-40c0-66.3-71.6-120-160-120z"/></svg>`;
+                
+                const blob = new Blob([svgString], {type: 'image/svg+xml;charset=utf-8'});
+                const url = URL.createObjectURL(blob);
+                const logoImg = new Image();
+
+                logoImg.onload = function() {
+                    const logoSize = 52; // সেন্ট্রাল লোগোর সাইজ
+                    const x = (qrSize - logoSize) / 2;
+                    const y = (qrSize - logoSize) / 2;
+
+                    // ৩. লোগোর পেছনে গোলাকার সাদা ব্যাকগ্রাউন্ড দেওয়া (যাতে QR স্ক্যান বিঘ্নিত না হয়)
+                    ctx.fillStyle = '#ffffff';
+                    ctx.beginPath();
+                    ctx.arc(qrSize / 2, qrSize / 2, (logoSize / 2) + 4, 0, Math.PI * 2);
+                    ctx.fill();
+
+                    // ৪. মাঝখানে পুলিশ আইকন ড্র করা
+                    ctx.drawImage(logoImg, x, y, logoSize, logoSize);
+                    URL.revokeObjectURL(url);
+                };
+
+                logoImg.src = url;
+                document.getElementById('qrResult').style.display = 'block';
+            }, 150);
         }
 
         // ৩. ডাটাবেজ থেকে ফাইল তালিকা লোড
@@ -205,7 +248,6 @@
 
             tableBody.innerHTML = "";
             documents.forEach(doc => {
-                // Storage Public URL
                 const { data: urlData } = supabaseClient
                     .storage
                     .from('documents')
