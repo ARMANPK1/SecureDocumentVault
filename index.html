@@ -196,7 +196,8 @@
     <script>
         let supabaseClient = null;
         let currentDocumentData = null;
-
+let wrongAttempts = 60; // ভুল চেষ্টার সংখ্যা গণনার জন্য
+        let timerInterval = null; // টাইমার ট্র্যাকিংয়ের জন্য
         function initSupabase() {
             if (typeof supabase !== 'undefined' && typeof SUPABASE_URL !== 'undefined' && typeof SUPABASE_ANON_KEY !== 'undefined') {
                 supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
@@ -236,8 +237,76 @@
 
             currentDocumentData = data;
         }
-
+// পাসওয়ার্ড যাচাই ও টাইমার সিকিউরিটি লজিক
         document.getElementById('verifyBtn').addEventListener('click', () => {
+            const passcodeElement = document.getElementById('customerPasscode');
+            const verifyBtn = document.getElementById('verifyBtn');
+            const errorMsg = document.getElementById('errorMsg');
+
+            const inputPass = passcodeElement.value.trim();
+
+            if (!currentDocumentData) {
+                errorMsg.innerText = "❌ ফাইলের তথ্য লোড হতে সমস্যা হয়েছে। পেজ রিফ্রেশ করুন।";
+                errorMsg.style.display = "block";
+                return;
+            }
+
+            const correctPass = String(currentDocumentData.password).trim();
+
+            if (inputPass === correctPass) {
+                errorMsg.style.display = "none";
+                document.getElementById('authBox').style.display = "none";
+                showFile();
+            } else {
+                wrongAttempts++;
+
+                if (wrongAttempts === 1) {
+                    startTimer(60); // ১ম ভুল: ১ মিনিট (৬০ সেকেন্ড)
+                } else if (wrongAttempts === 2) {
+                    startTimer(30); // ২য় ভুল: ৩০ সেকেন্ড
+                } else if (wrongAttempts === 3) {
+                    startTimer(15); // ৩য় ভুল: ১৫ সেকেন্ড
+                } else if (wrongAttempts >= 4) {
+                    // ৪থ ভুল: সাইট থেকে বের করে দেওয়া
+                    errorMsg.innerText = "🚨 আপনি বহুবার ভুল পাসওয়ার্ড দিয়েছেন! আপনাকে হোম পেজে রিডাইরেক্ট করা হচ্ছে...";
+                    errorMsg.style.display = "block";
+                    passcodeElement.disabled = true;
+                    verifyBtn.disabled = true;
+
+                    setTimeout(() => {
+                        window.location.href = "index.html"; // মূল হোম পেজে রিডাইরেক্ট
+                    }, 2000);
+                }
+            }
+        });
+
+        // কাউন্টডাউন টাইমার জেনারেট করার ফাংশন
+        function startTimer(seconds) {
+            const passcodeElement = document.getElementById('customerPasscode');
+            const verifyBtn = document.getElementById('verifyBtn');
+            const errorMsg = document.getElementById('errorMsg');
+
+            passcodeElement.disabled = true;
+            verifyBtn.disabled = true;
+            let timeLeft = seconds;
+
+            errorMsg.style.display = "block";
+
+            timerInterval = setInterval(() => {
+                errorMsg.innerText = `❌ ভুল পাসওয়ার্ড! আবার চেষ্টা করতে অপেক্ষা করুন: ${timeLeft} সেকেন্ড`;
+                timeLeft--;
+
+                if (timeLeft < 0) {
+                    clearInterval(timerInterval);
+                    passcodeElement.disabled = false;
+                    verifyBtn.disabled = false;
+                    errorMsg.style.display = "none";
+                    passcodeElement.value = "";
+                    passcodeElement.focus();
+                }
+            }, 1000);
+        }
+        
             const inputPass = document.getElementById('customerPasscode').value.trim();
             const errorMsg = document.getElementById('errorMsg');
 
