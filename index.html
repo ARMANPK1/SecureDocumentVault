@@ -4,26 +4,188 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Secure Vault Document Viewer</title>
-    <link rel="stylesheet" href="style.css">
     <!-- Supabase Library -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 50%, #311042 100%);
+            color: #f8fafc;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+            padding: 35px 25px;
+            max-width: 480px;
+            width: 100%;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
+            text-align: center;
+        }
+
+        .vault-icon {
+            font-size: 45px;
+            margin-bottom: 15px;
+            display: inline-block;
+            filter: drop-shadow(0 0 10px rgba(168, 85, 247, 0.5));
+        }
+
+        h2 {
+            font-size: 24px;
+            color: #ffffff;
+            margin-bottom: 8px;
+            font-weight: 700;
+        }
+
+        .subtitle {
+            font-size: 13px;
+            color: #cbd5e1;
+            margin-bottom: 25px;
+        }
+
+        .input-group {
+            margin-bottom: 20px;
+        }
+
+        input[type="password"] {
+            width: 100%;
+            padding: 14px 18px;
+            border-radius: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            background: rgba(15, 23, 42, 0.6);
+            color: #ffffff;
+            font-size: 15px;
+            outline: none;
+            transition: all 0.3s ease;
+            text-align: center;
+            letter-spacing: 2px;
+        }
+
+        input[type="password"]:focus {
+            border-color: #a855f7;
+            box-shadow: 0 0 15px rgba(168, 85, 247, 0.4);
+            background: rgba(15, 23, 42, 0.8);
+        }
+
+        button {
+            width: 100%;
+            padding: 14px;
+            border: none;
+            border-radius: 12px;
+            background: linear-gradient(90deg, #6366f1 0%, #a855f7 100%);
+            color: #ffffff;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+            box-shadow: 0 4px 15px rgba(168, 85, 247, 0.4);
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(168, 85, 247, 0.6);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        #errorMsg {
+            color: #f87171;
+            font-size: 13px;
+            margin-top: 15px;
+            padding: 10px;
+            background: rgba(239, 68, 68, 0.1);
+            border-radius: 8px;
+            border: 1px solid rgba(239, 68, 68, 0.2);
+            display: none;
+        }
+
+        #documentBox {
+            margin-top: 25px;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            padding-top: 20px;
+        }
+
+        #docTitle {
+            font-size: 18px;
+            color: #e2e8f0;
+            margin-bottom: 15px;
+            word-break: break-word;
+        }
+
+        .file-preview {
+            border-radius: 12px;
+            overflow: hidden;
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            background: rgba(0, 0, 0, 0.3);
+            max-height: 500px;
+        }
+
+        .file-preview img {
+            width: 100%;
+            height: auto;
+            display: block;
+        }
+
+        .file-preview iframe {
+            width: 100%;
+            height: 450px;
+            border: none;
+        }
+
+        .download-btn {
+            display: inline-block;
+            margin-top: 15px;
+            padding: 12px 24px;
+            background: #22c55e;
+            color: #ffffff;
+            text-decoration: none;
+            border-radius: 10px;
+            font-weight: 600;
+            box-shadow: 0 4px 12px rgba(34, 197, 94, 0.3);
+            transition: all 0.2s;
+        }
+
+        .download-btn:hover {
+            background: #16a34a;
+            box-shadow: 0 6px 16px rgba(34, 197, 94, 0.4);
+        }
+    </style>
 </head>
 <body>
     <div class="container">
-        <h2>🔒 ডকুমেন্ট ভিউয়ার</h2>
-        <p style="font-size: 13px; color: #666;">ফাইলের গোপনীয়তা রক্ষার্থে সঠিক পাসওয়ার্ড প্রবেশ করান</p>
+        <div class="vault-icon">🔒</div>
+        <h2>Secure Document Vault</h2>
+        <p class="subtitle">ফাইলের গোপনীয়তা রক্ষার্থে সঠিক পাসওয়ার্ড দিন</p>
 
         <!-- পাসওয়ার্ড ইনপুট ফর্ম -->
         <div id="authBox">
-            <input type="password" id="customerPasscode" placeholder="সিক্রেট পাসওয়ার্ড লিখুন"><br><br>
-            <button id="verifyBtn">ডকুমেন্ট খুলুন</button>
-            <p id="errorMsg" style="color: red; margin-top: 10px; display: none;"></p>
+            <div class="input-group">
+                <input type="password" id="customerPasscode" placeholder="সিক্রেট পাসওয়ার্ড লিখুন">
+            </div>
+            <button id="verifyBtn">ডকুমেন্ট দেখুন</button>
+            <p id="errorMsg"></p>
         </div>
 
         <!-- ফাইল দেখানোর স্থান -->
-        <div id="documentBox" style="display: none; margin-top: 20px;">
+        <div id="documentBox" style="display: none;">
             <h3 id="docTitle"></h3>
-            <div id="fileViewer"></div>
+            <div id="fileViewer" class="file-preview"></div>
         </div>
     </div>
 
@@ -41,28 +203,25 @@
             }
         }
 
-        // URL থেকে File Parameter বের করার ফাংশন
         function getQueryParam(param) {
             const urlParams = new URLSearchParams(window.location.search);
             return urlParams.get(param);
         }
 
-        // ফাইল সংক্রান্ত তথ্য লোড করা
         async function loadDocumentInfo() {
             initSupabase();
             const filePath = getQueryParam('file');
 
             if (!filePath) {
-                document.getElementById('authBox').innerHTML = '<p style="color:red;">❌ কোনো ফাইলের লিংক পাওয়া যায়নি!</p>';
+                document.getElementById('authBox').innerHTML = '<p style="color:#f87171;">❌ কোনো ফাইলের লিংক পাওয়া যায়নি!</p>';
                 return;
             }
 
             if (!supabaseClient) {
-                alert('Supabase Config সঠিক নয়!');
+                document.getElementById('authBox').innerHTML = '<p style="color:#f87171;">⚠️ Supabase কনফিগারেশন মিসিং!</p>';
                 return;
             }
 
-            // ডাটাবেজ থেকে পাসওয়ার্ড সহ সব তথ্য লোড করা (* দিয়ে পাসওয়ার্ড সিলেক্ট করা হয়েছে)
             const { data, error } = await supabaseClient
                 .from('documents')
                 .select('*')
@@ -71,14 +230,13 @@
 
             if (error || !data) {
                 console.error('Fetch Error:', error);
-                document.getElementById('authBox').innerHTML = '<p style="color:red;">❌ ফাইলটি ডাটাবেজে পাওয়া যায়নি বা মুছে ফেলা হয়েছে!</p>';
+                document.getElementById('authBox').innerHTML = '<p style="color:#f87171;">❌ ফাইলটি ডাটাবেজে পাওয়া যায়নি!</p>';
                 return;
             }
 
             currentDocumentData = data;
         }
 
-        // পাসওয়ার্ড যাচাই করার লজিক
         document.getElementById('verifyBtn').addEventListener('click', () => {
             const inputPass = document.getElementById('customerPasscode').value.trim();
             const errorMsg = document.getElementById('errorMsg');
@@ -89,7 +247,6 @@
                 return;
             }
 
-            // পাসওয়ার্ড মেলানো (String এ রূপান্তর ও স্পেস রিমুভ করে)
             const correctPass = String(currentDocumentData.password).trim();
 
             if (inputPass === correctPass) {
@@ -102,7 +259,6 @@
             }
         });
 
-        // ফাইল দেখানোর ফাংশন
         function showFile() {
             const { data: urlData } = supabaseClient
                 .storage
@@ -118,17 +274,16 @@
             const ext = currentDocumentData.file_path.split('.').pop().toLowerCase();
 
             if (['jpg', 'jpeg', 'png', 'webp', 'gif'].includes(ext)) {
-                fileViewer.innerHTML = `<img src="${fileUrl}" style="max-width:100%; height:auto; border-radius:8px; border:1px solid #ccc;">`;
+                fileViewer.innerHTML = `<img src="${fileUrl}" alt="Document Preview">`;
             } else if (ext === 'pdf') {
-                fileViewer.innerHTML = `<iframe src="${fileUrl}" width="100%" height="500px" style="border:none;"></iframe>`;
+                fileViewer.innerHTML = `<iframe src="${fileUrl}"></iframe>`;
             } else {
-                fileViewer.innerHTML = `<a href="${fileUrl}" target="_blank" style="display:inline-block; padding:10px 15px; background:#0066cc; color:white; text-decoration:none; border-radius:5px;">📥 ফাইলটি ডাউনলোড করুন</a>`;
+                fileViewer.innerHTML = `<div style="padding:20px;"><p style="margin-bottom:10px;">এই ফাইলটি সরাসরি ব্রাউজারে দেখা যাবে না।</p><a href="${fileUrl}" target="_blank" class="download-btn">📥 ফাইলটি ডাউনলোড করুন</a></div>`;
             }
 
             docBox.style.display = "block";
         }
 
-        // পেজ লোড হলে
         window.addEventListener('DOMContentLoaded', loadDocumentInfo);
     </script>
 </body>
