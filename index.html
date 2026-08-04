@@ -3,51 +3,37 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Secure Vault - ফাইল ভিউয়ার</title>
+    <title>Secure Vault Document Viewer</title>
     <link rel="stylesheet" href="style.css">
     <!-- Supabase Library -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <style>
-        body { font-family: Arial, sans-serif; background-color: #f4f7f6; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
-        .vault-card { background: white; padding: 30px; border-radius: 10px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); width: 100%; max-width: 450px; text-align: center; }
-        input[type="password"] { width: 100%; padding: 12px; margin: 15px 0; border: 1px solid #ccc; border-radius: 5px; box-sizing: border-box; font-size: 16px; }
-        button { background-color: #28a745; color: white; border: none; padding: 12px 20px; border-radius: 5px; cursor: pointer; width: 100%; font-size: 16px; font-weight: bold; }
-        button:hover { background-color: #218838; }
-        #fileViewerContainer { margin-top: 20px; display: none; }
-        .file-preview { max-width: 100%; max-height: 350px; border-radius: 5px; margin-top: 10px; border: 1px solid #ddd; }
-        .error-msg { color: red; margin-top: 10px; font-size: 14px; }
-    </style>
 </head>
 <body>
+    <div class="container">
+        <h2>🔒 ডকুমেন্ট ভিউয়ার</h2>
+        <p style="font-size: 13px; color: #666;">ফাইলের গোপনীয়তা রক্ষার্থে সঠিক পাসওয়ার্ড প্রবেশ করান</p>
 
-    <div class="vault-card">
-        <h2>🔐 সিকিউর ফাইল ভিউয়ার</h2>
-        <p id="fileTitleText" style="color: #666; font-size: 14px;">ফাইল দেখতে পাসওয়ার্ড দিন</p>
-
-        <!-- পাসওয়ার্ড দেওয়ার ফর্ম -->
+        <!-- পাসওয়ার্ড ইনপুট ফর্ম -->
         <div id="authBox">
-            <input type="password" id="accessPassword" placeholder="সিক্রেট পাসওয়ার্ড লিখুন" required>
-            <button id="verifyBtn" onclick="verifyAndLoadFile()">ফাইল আনলক করুন</button>
-            <p id="errorText" class="error-msg"></p>
+            <input type="password" id="customerPasscode" placeholder="সিক্রেট পাসওয়ার্ড লিখুন"><br><br>
+            <button id="verifyBtn">ডকুমেন্ট খুলুন</button>
+            <p id="errorMsg" style="color: red; margin-top: 10px; display: none;"></p>
         </div>
 
-        <!-- ফাইল শো করার কন্টেইনার -->
-        <div id="fileViewerContainer">
-            <h3 id="displayFileName" style="color: #333; margin-bottom: 10px;"></h3>
-            <div id="mediaBox"></div>
-            <br>
-            <a id="downloadBtn" href="#" target="_blank" style="display: inline-block; margin-top: 15px; background: #007bff; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">📥 ফাইল ডাউনলোড করুন</a>
+        <!-- ফাইল দেখানোর স্থান -->
+        <div id="documentBox" style="display: none; margin-top: 20px;">
+            <h3 id="docTitle"></h3>
+            <div id="fileViewer"></div>
         </div>
     </div>
 
-    <!-- 1. Config First -->
+    <!-- 1. Config -->
     <script src="config.js"></script>
 
-    <!-- 2. Logic -->
+    <!-- 2. Logic Script -->
     <script>
         let supabaseClient = null;
-        let fileRecord = null;
-        let fileParam = null;
+        let currentDocumentData = null;
 
         function initSupabase() {
             if (typeof supabase !== 'undefined' && typeof SUPABASE_URL !== 'undefined' && typeof SUPABASE_ANON_KEY !== 'undefined') {
@@ -55,91 +41,95 @@
             }
         }
 
-        // URL থেকে ফাইল পাথ বা আইডি বের করা
-        window.addEventListener('DOMContentLoaded', async () => {
-            initSupabase();
-            if (!supabaseClient) {
-                document.getElementById('errorText').innerText = "⚠️ Supabase কনফিগারেশন লোড হয়নি!";
-                return;
-            }
-
+        // URL থেকে File Parameter বের করার ফাংশন
+        function getQueryParam(param) {
             const urlParams = new URLSearchParams(window.location.search);
-            fileParam = urlParams.get('file'); // যেমন: uniqueFileName
+            return urlParams.get(param);
+        }
 
-            if (!fileParam) {
-                document.getElementById('authBox').style.display = 'none';
-                document.getElementById('fileTitleText').innerText = "❌ কোনো ফাইল সিলেক্ট করা হয়নি বা লিংক ভুল!";
-                document.getElementById('fileTitleText').style.color = "red";
+        // ফাইল সংক্রান্ত তথ্য লোড করা
+        async function loadDocumentInfo() {
+            initSupabase();
+            const filePath = getQueryParam('file');
+
+            if (!filePath) {
+                document.getElementById('authBox').innerHTML = '<p style="color:red;">❌ কোনো ফাইলের লিংক পাওয়া যায়নি!</p>';
                 return;
             }
 
-            // ডাটাবেজ থেকে এই ফাইলের ইনফো ফেচ করা
+            if (!supabaseClient) {
+                alert('Supabase Config সঠিক নয়!');
+                return;
+            }
+
+            // ডাটাবেজ থেকে পাসওয়ার্ড সহ সব তথ্য লোড করা (* দিয়ে পাসওয়ার্ড সিলেক্ট করা হয়েছে)
             const { data, error } = await supabaseClient
                 .from('documents')
                 .select('*')
-                .eq('file_path', fileParam)
+                .eq('file_path', filePath)
                 .single();
 
             if (error || !data) {
-                document.getElementById('errorText').innerText = "❌ ফাইলটি ডাটাবেজে পাওয়া যায়নি!";
+                console.error('Fetch Error:', error);
+                document.getElementById('authBox').innerHTML = '<p style="color:red;">❌ ফাইলটি ডাটাবেজে পাওয়া যায়নি বা মুছে ফেলা হয়েছে!</p>';
                 return;
             }
 
-            fileRecord = data;
-            document.getElementById('fileTitleText').innerText = `ডকুমেন্ট: ${fileRecord.file_name}`;
+            currentDocumentData = data;
+        }
+
+        // পাসওয়ার্ড যাচাই করার লজিক
+        document.getElementById('verifyBtn').addEventListener('click', () => {
+            const inputPass = document.getElementById('customerPasscode').value.trim();
+            const errorMsg = document.getElementById('errorMsg');
+
+            if (!currentDocumentData) {
+                errorMsg.innerText = "❌ ফাইলের তথ্য লোড হতে সমস্যা হয়েছে। পেজ রিফ্রেশ করুন।";
+                errorMsg.style.display = "block";
+                return;
+            }
+
+            // পাসওয়ার্ড মেলানো (String এ রূপান্তর ও স্পেস রিমুভ করে)
+            const correctPass = String(currentDocumentData.password).trim();
+
+            if (inputPass === correctPass) {
+                errorMsg.style.display = "none";
+                document.getElementById('authBox').style.display = "none";
+                showFile();
+            } else {
+                errorMsg.innerText = "❌ ভুল পাসওয়ার্ড! সঠিক পাসওয়ার্ড দিয়ে আবার চেষ্টা করুন।";
+                errorMsg.style.display = "block";
+            }
         });
 
-        // পাসওয়ার্ড যাচাই করে ফাইল ওপেন করার ফাংশন
-        async function verifyAndLoadFile() {
-            const enteredPassword = document.getElementById('accessPassword').value.trim();
-            const errorText = document.getElementById('errorText');
-            errorText.innerText = "";
+        // ফাইল দেখানোর ফাংশন
+        function showFile() {
+            const { data: urlData } = supabaseClient
+                .storage
+                .from('documents')
+                .getPublicUrl(currentDocumentData.file_path);
 
-            if (!enteredPassword) {
-                errorText.innerText = "⚠️ দয়া করে পাসওয়ার্ড দিন!";
-                return;
-            }
+            const fileUrl = urlData.publicUrl;
+            const docBox = document.getElementById('documentBox');
+            const fileViewer = document.getElementById('fileViewer');
 
-            if (!fileRecord) {
-                errorText.innerText = "⚠️ ফাইলের তথ্য লোড হয়নি!";
-                return;
-            }
+            document.getElementById('docTitle').innerText = currentDocumentData.file_name || 'ডকুমেন্ট';
 
-            // ডাটাবেজের পাসওয়ার্ডের সাথে ইউজারের দেওয়া পাসওয়ার্ড মেলানো
-            if (enteredPassword === fileRecord.passcode) {
-                // পাসওয়ার্ড সঠিক! এখন স্টোরেজ থেকে পাবলিক বা সাইনড ইউআরএল আনব
-                const { data: urlData } = supabaseClient
-                    .storage
-                    .from('vault-bucket')
-                    .getPublicUrl(fileRecord.file_path);
+            const ext = currentDocumentData.file_path.split('.').pop().toLowerCase();
 
-                const fileUrl = urlData.publicUrl;
-
-                // ইউজার ইন্টারফেস পরিবর্তন
-                document.getElementById('authBox').style.display = 'none';
-                document.getElementById('fileTitleText').style.display = 'none';
-                document.getElementById('fileViewerContainer').style.display = 'block';
-                document.getElementById('displayFileName').innerText = fileRecord.file_name;
-
-                // ফাইল যদি ছবি হয় বা অন্য কিছু হয় সেভাবে প্রিভিউ দেখানো
-                const mediaBox = document.getElementById('mediaBox');
-                const fileExt = fileRecord.file_path.split('.').pop().toLowerCase();
-                
-                if (['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(fileExt)) {
-                    mediaBox.innerHTML = `<img src="${fileUrl}" class="file-preview" alt="Vault Image">`;
-                } else if (fileExt === 'pdf') {
-                    mediaBox.innerHTML = `<iframe src="${fileUrl}" width="100%" height="300px" style="border:none;"></iframe>`;
-                } else {
-                    mediaBox.innerHTML = `<p>এই ফাইলটি সরাসরি প্রিভিউ করা যাচ্ছে না, নিচের বাটন থেকে ডাউনলোড করুন।</p>`;
-                }
-
-                // ডাউনলোড বাটন সেটআপ
-                document.getElementById('downloadBtn').href = fileUrl;
-
+            if (['jpg', 'jpeg', 'png', 'webp', 'gif'].includes(ext)) {
+                fileViewer.innerHTML = `<img src="${fileUrl}" style="max-width:100%; height:auto; border-radius:8px; border:1px solid #ccc;">`;
+            } else if (ext === 'pdf') {
+                fileViewer.innerHTML = `<iframe src="${fileUrl}" width="100%" height="500px" style="border:none;"></iframe>`;
             } else {
-                errorText.innerText = "❌ ভুল পাসওয়ার্ড! আবার চেষ্টা করুন।";
+                fileViewer.innerHTML = `<a href="${fileUrl}" target="_blank" style="display:inline-block; padding:10px 15px; background:#0066cc; color:white; text-decoration:none; border-radius:5px;">📥 ফাইলটি ডাউনলোড করুন</a>`;
             }
+
+            docBox.style.display = "block";
         }
+
+        // পেজ লোড হলে
+        window.addEventListener('DOMContentLoaded', loadDocumentInfo);
     </script>
 </body>
 </html>
