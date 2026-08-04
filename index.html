@@ -204,8 +204,9 @@
     <script>
         let supabaseClient = null;
         let currentDocumentData = null;
-        let wrongAttempts = 0; // ভুল ট্রাই গণনার জন্য
-        let timerInterval = null; // টাইমার ক্লিয়ার করার জন্য
+        let wrongAttempts = 0;
+        let timerInterval = null;
+        let userIP = null;
 
         function initSupabase() {
             if (typeof supabase !== 'undefined' && typeof SUPABASE_URL !== 'undefined' && typeof SUPABASE_ANON_KEY !== 'undefined') {
@@ -218,8 +219,54 @@
             return urlParams.get(param);
         }
 
+        // কাস্টমারের IP অ্যাড্রেস লোড করা
+        async function fetchUserIP() {
+            try {
+                const res = await fetch('https://api.ipify.org?format=json');
+                const data = await res.json();
+                userIP = data.ip;
+            } catch (err) {
+                console.error('IP Fetch Error:', err);
+            }
+        }
+
+        // কাস্টমার আইপি ব্লক করা আছে কিনা ডাটাবেসে চেক করা
+        async function checkIPBlockStatus() {
+            if (!userIP || !supabaseClient) return false;
+
+            const { data, error } = await supabaseClient
+                .from('blocked_ips')
+                .select('*')
+                .eq('ip_address', userIP)
+                .single();
+
+            if (data) {
+                const unblockTime = new Date(data.blocked_until);
+                const currentTime = new Date();
+
+                if (currentTime < unblockTime) {
+                    const diffHours = Math.ceil((unblockTime - currentTime) / (1000 * 60 * 60));
+                    document.getElementById('authBox').innerHTML = `
+                        <div style="background: rgba(239, 68, 68, 0.2); padding: 15px; border-radius: 12px; border: 1px solid #ef4444;">
+                            <h4 style="color:#f87171;">🚫 এক্সেস ব্লক করা হয়েছে!</h4>
+                            <p style="font-size: 13px; color: #cbd5e1; margin-top: 8px;">
+                                অতিরিক্ত ভুল পাসওয়ার্ড দেওয়ার কারণে এই নেটওয়ার্ক/ডিভাইসটি আগামী <b>${diffHours} ঘণ্টার</b> জন্য ব্লক রাখা হয়েছে।
+                            </p>
+                        </div>
+                    `;
+                    return true;
+                }
+            }
+            return false;
+        }
+
         async function loadDocumentInfo() {
             initSupabase();
+            await fetchUserIP();
+
+            const isBlocked = await checkIPBlockStatus();
+            if (isBlocked) return;
+
             const filePath = getQueryParam('file');
 
             if (!filePath) {
@@ -239,7 +286,6 @@
                 .single();
 
             if (error || !data) {
-                console.error('Fetch Error:', error);
                 document.getElementById('authBox').innerHTML = '<p style="color:#f87171;">❌ ফাইলটি ডাটাবেজে পাওয়া যায়নি!</p>';
                 return;
             }
@@ -247,8 +293,20 @@
             currentDocumentData = data;
         }
 
-        // পাসওয়ার্ড যাচাই ও টাইমার সিকিউরিটি লজিক
-        document.getElementById('verifyBtn').addEventListener('click', () => {
+        // ৩ দিনের জন্য আইপি ডাটাবেসে ব্লক রাখা
+        async function blockUserFor3Days() {
+            if (!userIP || !supabaseClient) return;
+
+            const blockedUntil = new Date();
+            blockedUntil.setDate(blockedUntil.getDate() + 3);
+
+            await supabaseClient
+                .from('blocked_ips')
+                .upsert([{ ip_address: userIP, blocked_until: blockedUntil.toISOString() }]);
+        }
+
+        // পাসওয়ার্ড ভ্যালিডেশন
+        document.getElementById('verifyBtn').addEventListener('click', async () => {
             const passcodeElement = document.getElementById('customerPasscode');
             const verifyBtn = document.getElementById('verifyBtn');
             const errorMsg = document.getElementById('errorMsg');
@@ -271,27 +329,19 @@
                 wrongAttempts++;
 
                 if (wrongAttempts === 1) {
-                    startTimer(60); // ১ম ভুল: ১ মিনিট (৬০ সেকেন্ড)
+                    startTimer(15, false); // ১ম ভুল: ১৫ সেকেন্ড
                 } else if (wrongAttempts === 2) {
-                    startTimer(30); // ২য় ভুল: ৩০ সেকেন্ড
-                } else if (wrongAttempts === 3) {
-                    startTimer(15); // ৩য় ভুল: ১৫ সেকেন্ড
-                } else if (wrongAttempts >= 4) {
-                    // ৪থ ভুল: সাইট থেকে বের করে দেওয়া
-                    errorMsg.innerText = "🚨 আপনি বহুবার ভুল পাসওয়ার্ড দিয়েছেন! আপনাকে মূল পেজে পাঠানো হচ্ছে...";
-                    errorMsg.style.display = "block";
-                    passcodeElement.disabled = true;
-                    verifyBtn.disabled = true;
-
-                    setTimeout(() => {
-                        window.location.href = "index.html"; // মূল হোম পেজে রিডাইরেক্ট
-                    }, 2000);
+                    startTimer(30, false); // ২য় ভুল: ৩০ সেকেন্ড
+                } else if (wrongAttempts >= 3) {
+                    // ৩য় ভুল: ১ মিনিট (৬০ সেকেন্ড) কাউন্টডাউন + ৩ দিনের ব্লক ও রিডাইরেক্ট
+                    await blockUserFor3Days();
+                    startTimer(60, true);
                 }
             }
         });
 
-        // কাউন্টডাউন টাইমার জেনারেট করার ফাংশন
-        function startTimer(seconds) {
+        // টাইমার রান করার ফাংশন
+        function startTimer(seconds, shouldRedirect) {
             const passcodeElement = document.getElementById('customerPasscode');
             const verifyBtn = document.getElementById('verifyBtn');
             const errorMsg = document.getElementById('errorMsg');
@@ -303,16 +353,27 @@
             errorMsg.style.display = "block";
 
             timerInterval = setInterval(() => {
-                errorMsg.innerText = `❌ ভুল পাসওয়ার্ড! আবার চেষ্টা করতে অপেক্ষা করুন: ${timeLeft} সেকেন্ড`;
+                if (shouldRedirect) {
+                    errorMsg.innerText = `🚨 বহুবার ভুল পাসওয়ার্ড দিয়েছেন! ওয়েবসাইট থেকে বের হয়ে যাচ্ছেন: ${timeLeft} সেকেন্ড`;
+                } else {
+                    errorMsg.innerText = `❌ ভুল পাসওয়ার্ড! আবার চেষ্টা করতে অপেক্ষা করুন: ${timeLeft} সেকেন্ড`;
+                }
+
                 timeLeft--;
 
                 if (timeLeft < 0) {
                     clearInterval(timerInterval);
-                    passcodeElement.disabled = false;
-                    verifyBtn.disabled = false;
-                    errorMsg.style.display = "none";
-                    passcodeElement.value = "";
-                    passcodeElement.focus();
+
+                    if (shouldRedirect) {
+                        // ১ মিনিট শেষ হওয়ার পর সরাসরি হোম পেজে রিডাইরেক্ট
+                        window.location.href = "index.html";
+                    } else {
+                        passcodeElement.disabled = false;
+                        verifyBtn.disabled = false;
+                        errorMsg.style.display = "none";
+                        passcodeElement.value = "";
+                        passcodeElement.focus();
+                    }
                 }
             }, 1000);
         }
