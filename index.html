@@ -75,6 +75,12 @@
             letter-spacing: 2px;
         }
 
+        input[type="password"]:disabled {
+            background: rgba(255, 255, 255, 0.1);
+            cursor: not-allowed;
+            border-color: rgba(239, 68, 68, 0.4);
+        }
+
         input[type="password"]:focus {
             border-color: #a855f7;
             box-shadow: 0 0 15px rgba(168, 85, 247, 0.4);
@@ -95,13 +101,15 @@
             box-shadow: 0 4px 15px rgba(168, 85, 247, 0.4);
         }
 
-        button:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 6px 20px rgba(168, 85, 247, 0.6);
+        button:disabled {
+            background: #475569;
+            box-shadow: none;
+            cursor: not-allowed;
         }
 
-        button:active {
-            transform: translateY(0);
+        button:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(168, 85, 247, 0.6);
         }
 
         #errorMsg {
@@ -196,8 +204,9 @@
     <script>
         let supabaseClient = null;
         let currentDocumentData = null;
-let wrongAttempts = 60; // ভুল চেষ্টার সংখ্যা গণনার জন্য
-        let timerInterval = null; // টাইমার ট্র্যাকিংয়ের জন্য
+        let wrongAttempts = 0; // ভুল ট্রাই গণনার জন্য
+        let timerInterval = null; // টাইমার ক্লিয়ার করার জন্য
+
         function initSupabase() {
             if (typeof supabase !== 'undefined' && typeof SUPABASE_URL !== 'undefined' && typeof SUPABASE_ANON_KEY !== 'undefined') {
                 supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
@@ -237,7 +246,8 @@ let wrongAttempts = 60; // ভুল চেষ্টার সংখ্যা �
 
             currentDocumentData = data;
         }
-// পাসওয়ার্ড যাচাই ও টাইমার সিকিউরিটি লজিক
+
+        // পাসওয়ার্ড যাচাই ও টাইমার সিকিউরিটি লজিক
         document.getElementById('verifyBtn').addEventListener('click', () => {
             const passcodeElement = document.getElementById('customerPasscode');
             const verifyBtn = document.getElementById('verifyBtn');
@@ -268,7 +278,7 @@ let wrongAttempts = 60; // ভুল চেষ্টার সংখ্যা �
                     startTimer(15); // ৩য় ভুল: ১৫ সেকেন্ড
                 } else if (wrongAttempts >= 4) {
                     // ৪থ ভুল: সাইট থেকে বের করে দেওয়া
-                    errorMsg.innerText = "🚨 আপনি বহুবার ভুল পাসওয়ার্ড দিয়েছেন! আপনাকে হোম পেজে রিডাইরেক্ট করা হচ্ছে...";
+                    errorMsg.innerText = "🚨 আপনি বহুবার ভুল পাসওয়ার্ড দিয়েছেন! আপনাকে মূল পেজে পাঠানো হচ্ছে...";
                     errorMsg.style.display = "block";
                     passcodeElement.disabled = true;
                     verifyBtn.disabled = true;
@@ -306,27 +316,6 @@ let wrongAttempts = 60; // ভুল চেষ্টার সংখ্যা �
                 }
             }, 1000);
         }
-        
-            const inputPass = document.getElementById('customerPasscode').value.trim();
-            const errorMsg = document.getElementById('errorMsg');
-
-            if (!currentDocumentData) {
-                errorMsg.innerText = "❌ ফাইলের তথ্য লোড হতে সমস্যা হয়েছে। পেজ রিফ্রেশ করুন।";
-                errorMsg.style.display = "block";
-                return;
-            }
-
-            const correctPass = String(currentDocumentData.password).trim();
-
-            if (inputPass === correctPass) {
-                errorMsg.style.display = "none";
-                document.getElementById('authBox').style.display = "none";
-                showFile();
-            } else {
-                errorMsg.innerText = "❌ ভুল পাসওয়ার্ড! সঠিক পাসওয়ার্ড দিয়ে আবার চেষ্টা করুন।";
-                errorMsg.style.display = "block";
-            }
-        });
 
         function showFile() {
             const { data: urlData } = supabaseClient
