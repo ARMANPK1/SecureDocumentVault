@@ -26,6 +26,7 @@
         .btn-qr { background-color: #17a2b8; color: white; }
         .btn-edit { background-color: #ffc107; color: black; }
         .btn-delete { background-color: #dc3545; color: white; }
+        .pass-badge { background-color: #e9ecef; padding: 2px 5px; border-radius: 3px; font-family: monospace; font-weight: bold; }
     </style>
 </head>
 <body>
@@ -36,8 +37,19 @@
         
         <form id="uploadForm" onsubmit="return false;">
             <input type="text" id="fileNameInput" placeholder="ডকুমেন্টের শিরোনাম/নাম" required><br><br>
-            <input type="password" id="passcodeInput" placeholder="সিক্রেট পাসওয়ার্ড দিন" required><br><br>
-            <input type="file" id="fileInput" required><br><br>
+            
+            <div style="background: #f8f9fa; padding: 10px; border-radius: 5px; margin-bottom: 10px; text-align: left;">
+                <label style="font-size: 13px; font-weight: bold;">অটোমেটিক জেনারেট হওয়া নাম্বার পাসওয়ার্ড:</label><br>
+                <div style="display: flex; gap: 10px; margin-top: 5px;">
+                    <input type="text" id="passcodeInput" placeholder="ভিউ পাসওয়ার্ড" readonly style="width: 50%;">
+                    <input type="text" id="downloadPasscodeInput" placeholder="ডাউনলোড পাসওয়ার্ড" readonly style="width: 50%;">
+                </div>
+                <button type="button" onclick="generateAutoPasswords()" style="margin-top: 5px; background: #6c757d; color: white; border: none; padding: 4px 8px; border-radius: 3px; cursor: pointer;">🎲 নতুন পাসওয়ার্ড জেনারেট করুন</button>
+            </div>
+
+            <!-- মাল্টি ফাইল সিলেকশন সাপোর্ট -->
+            <input type="file" id="fileInput" multiple required><br>
+            <small style="color: #666;">(একসাথে একাধিক ফাইল সিলেক্ট করতে পারেন)</small><br><br>
             <button type="button" id="uploadBtn">আপলোড করুন</button>
         </form>
 
@@ -64,14 +76,15 @@
                     <thead>
                         <tr>
                             <th>শিরোনাম</th>
-                            <th>ফাইলের পাথ</th>
-                            <th>পাসওয়ার্ড</th>
+                            <th>ফাইলের সংখ্যা</th>
+                            <th>ভিউ পাসওয়ার্ড</th>
+                            <th>ডাউনলোড পাসওয়ার্ড</th>
                             <th>অ্যাকশন</th>
                         </tr>
                     </thead>
                     <tbody id="fileListBody">
                         <tr>
-                            <td colspan="4" style="text-align: center;">ডাটা লোড হচ্ছে...</td>
+                            <td colspan="5" style="text-align: center;">ডাটা লোড হচ্ছে...</td>
                         </tr>
                     </tbody>
                 </table>
@@ -92,7 +105,15 @@
             }
         }
 
-        // ১. ফাইল আপলোড লজিক
+        // অটোমেটিক ৬ ডিজিট সংখ্যাভিত্তিক পাসওয়ার্ড তৈরি
+        function generateAutoPasswords() {
+            const viewPass = Math.floor(100000 + Math.random() * 900000).toString();
+            const downloadPass = Math.floor(100000 + Math.random() * 900000).toString();
+            document.getElementById('passcodeInput').value = viewPass;
+            document.getElementById('downloadPasscodeInput').value = downloadPass;
+        }
+
+        // ১. ফাইল আপলোড লজিক (মাল্টি-ফাইল সাপোর্টসহ)
         document.getElementById('uploadBtn').addEventListener('click', async () => {
             if (!supabaseClient) initSupabase();
 
@@ -103,10 +124,11 @@
             
             const fileName = document.getElementById('fileNameInput').value.trim();
             const passcode = document.getElementById('passcodeInput').value.trim();
+            const downloadPasscode = document.getElementById('downloadPasscodeInput').value.trim();
             const fileInput = document.getElementById('fileInput');
-            const file = fileInput.files[0];
+            const files = fileInput.files;
 
-            if (!file || !fileName || !passcode) {
+            if (files.length === 0 || !fileName || !passcode || !downloadPasscode) {
                 alert('⚠️ অনুগ্রহ করে সবগুলো ঘর পূরণ করুন!');
                 return;
             }
@@ -116,40 +138,42 @@
             uploadBtn.disabled = true;
 
             try {
-                const fileExt = file.name.split('.').pop();
-                const uniqueFileName = `${Date.now()}_${fileName}.${fileExt}`;
+                let uploadedPaths = [];
 
-                // স্টোরেজ আপলোড
-                const { data: storageData, error: storageError } = await supabaseClient
-                    .storage
-                    .from('documents') 
-                    .upload(uniqueFileName, file);
+                // লুপ চালিয়ে প্রতিটি ফাইল আপলোড করা
+                for (let i = 0; i < files.length; i++) {
+                    const file = files[i];
+                    const fileExt = file.name.split('.').pop();
+                    const uniqueFileName = `${Date.now()}_${i}_${fileName.replace(/\s+/g, '_')}.${fileExt}`;
 
-                if (storageError) {
-                    throw new Error('স্টোরেজ এরর: ' + storageError.message);
+                    const { data: storageData, error: storageError } = await supabaseClient
+                        .storage
+                        .from('documents') 
+                        .upload(uniqueFileName, file);
+
+                    if (storageError) throw new Error('স্টোরেজ এরর: ' + storageError.message);
+                    uploadedPaths.push(uniqueFileName);
                 }
 
-                // ডাটাবেস ইনসার্ট
+                // ডাটাবেস ইনসার্ট (ফাইল পাথ JSON অ্যারে হিসেব সেভ)
                 const { data: dbData, error: dbError } = await supabaseClient
                     .from('documents')
                     .insert([
                         { 
                             file_name: fileName,
-                            file_path: uniqueFileName, 
-                            password: passcode
+                            file_path: JSON.stringify(uploadedPaths), 
+                            passcode: passcode,
+                            download_passcode: downloadPasscode
                         }
                     ]);
 
-                if (dbError) {
-                    throw new Error('ডাটাবেস এরর: ' + dbError.message);
-                }
+                if (dbError) throw new Error('ডাটাবেস এরর: ' + dbError.message);
 
                 alert('🎉 সফলভাবে ফাইল আপলোড ও সেভ হয়েছে!');
 
-                // লোগোসহ QR তৈরি
-                generateQRCode(uniqueFileName);
-
+                generateQRCode(JSON.stringify(uploadedPaths));
                 document.getElementById('uploadForm').reset();
+                generateAutoPasswords();
                 fetchFiles();
 
             } catch (err) {
@@ -161,7 +185,7 @@
             }
         });
 
-        // ২. অটোমেটিক সিকিউরিটি লোগোসহ QR Code জেনারেট করার ফাংশন
+        // ২. কাস্টম সিকিউরিটি লোগোসহ QR Code জেনারেট করা
         function generateQRCode(filePath) {
             const accessUrl = `https://armanpk1.github.io/SecureDocumentVault/index.html?file=${encodeURIComponent(filePath)}`;
             document.getElementById('fileLinkDisplay').innerText = accessUrl;
@@ -169,14 +193,12 @@
             const tempContainer = document.getElementById('qrcodeTemp');
             tempContainer.innerHTML = "";
 
-            // ক্যানভাস প্রস্তুত করা
             const mainCanvas = document.getElementById('qrCanvas');
             const ctx = mainCanvas.getContext('2d');
             const qrSize = 260;
             mainCanvas.width = qrSize;
             mainCanvas.height = qrSize;
 
-            // QRCode.js দিয়ে High Error Correction লেভেলে QR তৈরি
             const qrcodeObj = new QRCode(tempContainer, {
                 text: accessUrl,
                 width: qrSize,
@@ -188,10 +210,8 @@
                 const baseCanvas = tempContainer.querySelector('canvas');
                 if (!baseCanvas) return;
 
-                // ১. মূল ক্যানভাসে QR কোড আঁকা
                 ctx.drawImage(baseCanvas, 0, 0);
 
-                // ২. আপনার পাঠানো পুলিশ/সিকিউরিটি আইকনের নিখুঁত SVG ডেটা
                 const svgString = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><path fill="#000000" d="M256 0c-48.6 0-91.8 24.3-118 61.8L35 106.6C20.8 112 11.2 125.1 11.2 140.3c0 8.4 3 16.5 8.5 22.8l38.2 43.8c10.8 12.4 27.2 18.2 42.9 15.2l39.5-7.5c28 26.6 65.6 42.4 106.7 42.4s78.7-15.8 106.7-42.4l39.5 7.5c15.7 3 32.1-2.8 42.9-15.2l38.2-43.8c5.5-6.3 8.5-14.4 8.5-22.8 0-15.2-9.6-28.3-23.8-33.7l-103-44.8C347.8 24.3 304.6 0 256 0zm0 112c-44.2 0-80 35.8-80 80s35.8 80 80 80 80-35.8 80-80-35.8-80-80-80zm0 180c-88.4 0-160 53.7-160 120v40c0 11 9 20 20 20h280c11 0 20-9 20-20v-40c0-66.3-71.6-120-160-120z"/></svg>`;
                 
                 const blob = new Blob([svgString], {type: 'image/svg+xml;charset=utf-8'});
@@ -199,17 +219,15 @@
                 const logoImg = new Image();
 
                 logoImg.onload = function() {
-                    const logoSize = 52; // সেন্ট্রাল লোগোর সাইজ
+                    const logoSize = 52;
                     const x = (qrSize - logoSize) / 2;
                     const y = (qrSize - logoSize) / 2;
 
-                    // ৩. লোগোর পেছনে গোলাকার সাদা ব্যাকগ্রাউন্ড দেওয়া (যাতে QR স্ক্যান বিঘ্নিত না হয়)
                     ctx.fillStyle = '#ffffff';
                     ctx.beginPath();
                     ctx.arc(qrSize / 2, qrSize / 2, (logoSize / 2) + 4, 0, Math.PI * 2);
                     ctx.fill();
 
-                    // ৪. মাঝখানে পুলিশ আইকন ড্র করা
                     ctx.drawImage(logoImg, x, y, logoSize, logoSize);
                     URL.revokeObjectURL(url);
                 };
@@ -225,11 +243,11 @@
             const tableBody = document.getElementById('fileListBody');
 
             if (!supabaseClient) {
-                tableBody.innerHTML = `<tr><td colspan="4" style="text-align: center; color: red;">Supabase কনফিগারেশন মিসিং! (config.js চেক করুন)</td></tr>`;
+                tableBody.innerHTML = `<tr><td colspan="5" style="text-align: center; color: red;">Supabase কনফিগারেশন মিসিং!</td></tr>`;
                 return;
             }
 
-            tableBody.innerHTML = `<tr><td colspan="4" style="text-align: center;">ডাটা রিফ্রেশ হচ্ছে...</td></tr>`;
+            tableBody.innerHTML = `<tr><td colspan="5" style="text-align: center;">ডাটা রিফ্রেশ হচ্ছে...</td></tr>`;
 
             const { data: documents, error } = await supabaseClient
                 .from('documents')
@@ -237,31 +255,32 @@
                 .order('id', { ascending: false });
 
             if (error) {
-                tableBody.innerHTML = `<tr><td colspan="4" style="text-align: center; color: red;">এরর: ${error.message}</td></tr>`;
+                tableBody.innerHTML = `<tr><td colspan="5" style="text-align: center; color: red;">এরর: ${error.message}</td></tr>`;
                 return;
             }
 
             if (!documents || documents.length === 0) {
-                tableBody.innerHTML = `<tr><td colspan="4" style="text-align: center;">কোনো ফাইল পাওয়া যায়নি।</td></tr>`;
+                tableBody.innerHTML = `<tr><td colspan="5" style="text-align: center;">কোনো ফাইল পাওয়া যায়নি।</td></tr>`;
                 return;
             }
 
             tableBody.innerHTML = "";
             documents.forEach(doc => {
-                const { data: urlData } = supabaseClient
-                    .storage
-                    .from('documents')
-                    .getPublicUrl(doc.file_path);
+                let fileCount = 1;
+                try {
+                    const parsed = JSON.parse(doc.file_path);
+                    if (Array.isArray(parsed)) fileCount = parsed.length;
+                } catch(e){}
 
                 const row = document.createElement('tr');
                 row.innerHTML = `
                     <td><b>${doc.file_name || 'N/A'}</b></td>
-                    <td style="font-size: 11px; font-family: monospace;">${doc.file_path}</td>
-                    <td><code>${doc.password || 'N/A'}</code></td>
+                    <td><span class="pass-badge">${fileCount} টি ফাইল</span></td>
+                    <td><span class="pass-badge" style="color: #0066cc;">${doc.passcode || doc.password || 'N/A'}</span></td>
+                    <td><span class="pass-badge" style="color: #dc3545;">${doc.download_passcode || 'N/A'}</span></td>
                     <td>
-                        <a href="${urlData.publicUrl}" target="_blank" class="action-btn btn-view">👁️ দেখুন</a>
                         <button onclick="generateQRCode('${doc.file_path}')" class="action-btn btn-qr">📱 QR</button>
-                        <button onclick="editPassword('${doc.id}', '${doc.password}')" class="action-btn btn-edit">✏️ পাসওয়ার্ড</button>
+                        <button onclick="editPasswords('${doc.id}', '${doc.passcode || doc.password || ''}', '${doc.download_passcode || ''}')" class="action-btn btn-edit">✏️ পাসওয়ার্ড</button>
                         <button onclick="deleteFile('${doc.id}', '${doc.file_path}')" class="action-btn btn-delete">🗑️ ডিলিট</button>
                     </td>
                 `;
@@ -269,16 +288,23 @@
             });
         }
 
-        // ৪. পাসওয়ার্ড পরিবর্তনের ফাংশন
-        async function editPassword(id, oldPassword) {
-            const newPassword = prompt("নতুন পাসওয়ার্ড লিখুন:", oldPassword);
-            if (!newPassword || newPassword === oldPassword) return;
+        // ৪. ভিউ এবং ডাউনলোড দুটো পাসওয়ার্ডই এডিট করার ফাংশন
+        async function editPasswords(id, oldViewPass, oldDownPass) {
+            const newViewPass = prompt("নতুন 'ভিউ পাসওয়ার্ড' লিখুন:", oldViewPass);
+            if (newViewPass === null) return;
+
+            const newDownPass = prompt("নতুন 'ডাউনলোড পাসওয়ার্ড' লিখুন:", oldDownPass);
+            if (newDownPass === null) return;
 
             if (!supabaseClient) initSupabase();
 
             const { error } = await supabaseClient
                 .from('documents')
-                .update({ password: newPassword })
+                .update({ 
+                    passcode: newViewPass,
+                    password: newViewPass,
+                    download_passcode: newDownPass 
+                })
                 .eq('id', id);
 
             if (error) {
@@ -296,7 +322,16 @@
             if (!supabaseClient) initSupabase();
 
             if (filePath) {
-                await supabaseClient.storage.from('documents').remove([filePath]);
+                try {
+                    const files = JSON.parse(filePath);
+                    if (Array.isArray(files)) {
+                        await supabaseClient.storage.from('documents').remove(files);
+                    } else {
+                        await supabaseClient.storage.from('documents').remove([filePath]);
+                    }
+                } catch(e) {
+                    await supabaseClient.storage.from('documents').remove([filePath]);
+                }
             }
 
             const { error } = await supabaseClient
@@ -312,9 +347,10 @@
             }
         }
 
-        // পেজ লোড হলেই ডাটা লোড হবে
+        // পেজ লোড হলেই অটো পাসওয়ার্ড তৈরি এবং ডাটা লোড হবে
         window.addEventListener('DOMContentLoaded', () => {
             initSupabase();
+            generateAutoPasswords();
             fetchFiles();
         });
     </script>
