@@ -12,6 +12,8 @@
             margin: 0;
             padding: 0;
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            user-select: none; /* টেক্সট বা ফাইল সিলেকশন বন্ধ */
+            -webkit-user-select: none;
         }
 
         body {
@@ -25,7 +27,6 @@
             transition: background 0.5s ease;
         }
 
-        /* লাল সিগন্যাল এলার্ট অ্যানিমেশন */
         body.red-alert {
             background: linear-gradient(135deg, #7f1d1d 0%, #991b1b 50%, #450a0a 100%) !important;
             animation: shake 0.2s infinite;
@@ -47,10 +48,26 @@
             border: 1px solid rgba(255, 255, 255, 0.1);
             border-radius: 20px;
             padding: 35px 25px;
-            max-width: 480px;
+            max-width: 550px;
             width: 100%;
             box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
             text-align: center;
+            position: relative;
+        }
+
+        /* সিকিউরিটি ব্লকিং লেয়ার (ট্যাব সুইচ বা নজর সরালে দেখাবে) */
+        #securityOverlay {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(15, 23, 42, 0.98);
+            z-index: 99999;
+            color: #ef4444;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            font-size: 20px;
+            font-weight: bold;
         }
 
         .vault-icon {
@@ -60,22 +77,9 @@
             filter: drop-shadow(0 0 10px rgba(168, 85, 247, 0.5));
         }
 
-        h2 {
-            font-size: 24px;
-            color: #ffffff;
-            margin-bottom: 8px;
-            font-weight: 700;
-        }
-
-        .subtitle {
-            font-size: 13px;
-            color: #cbd5e1;
-            margin-bottom: 25px;
-        }
-
-        .input-group {
-            margin-bottom: 20px;
-        }
+        h2 { font-size: 24px; color: #ffffff; margin-bottom: 8px; font-weight: 700; }
+        .subtitle { font-size: 13px; color: #cbd5e1; margin-bottom: 25px; }
+        .input-group { margin-bottom: 20px; }
 
         input[type="password"] {
             width: 100%;
@@ -97,12 +101,6 @@
             border-color: rgba(239, 68, 68, 0.4);
         }
 
-        input[type="password"]:focus {
-            border-color: #a855f7;
-            box-shadow: 0 0 15px rgba(168, 85, 247, 0.4);
-            background: rgba(15, 23, 42, 0.8);
-        }
-
         button {
             width: 100%;
             padding: 14px;
@@ -117,81 +115,44 @@
             box-shadow: 0 4px 15px rgba(168, 85, 247, 0.4);
         }
 
-        button:disabled {
-            background: #475569;
-            box-shadow: none;
-            cursor: not-allowed;
-        }
-
-        button:hover:not(:disabled) {
-            transform: translateY(-2px);
-            box-shadow: 0 6px 20px rgba(168, 85, 247, 0.6);
-        }
+        button:disabled { background: #475569; box-shadow: none; cursor: not-allowed; }
 
         #errorMsg {
-            color: #f87171;
-            font-size: 13px;
-            margin-top: 15px;
-            padding: 10px;
-            background: rgba(239, 68, 68, 0.1);
-            border-radius: 8px;
-            border: 1px solid rgba(239, 68, 68, 0.2);
-            display: none;
+            color: #f87171; font-size: 13px; margin-top: 15px; padding: 10px;
+            background: rgba(239, 68, 68, 0.1); border-radius: 8px;
+            border: 1px solid rgba(239, 68, 68, 0.2); display: none;
         }
 
         #documentBox {
-            margin-top: 25px;
-            border-top: 1px solid rgba(255, 255, 255, 0.1);
-            padding-top: 20px;
+            margin-top: 25px; border-top: 1px solid rgba(255, 255, 255, 0.1); padding-top: 20px;
         }
 
-        #docTitle {
-            font-size: 18px;
-            color: #e2e8f0;
-            margin-bottom: 15px;
-            word-break: break-word;
+        .file-item {
+            background: rgba(0, 0, 0, 0.3); border-radius: 12px;
+            padding: 15px; margin-bottom: 15px; border: 1px solid rgba(255, 255, 255, 0.1);
         }
 
-        .file-preview {
-            border-radius: 12px;
-            overflow: hidden;
-            border: 1px solid rgba(255, 255, 255, 0.15);
-            background: rgba(0, 0, 0, 0.3);
-            max-height: 500px;
-        }
-
-        .file-preview img {
-            width: 100%;
-            height: auto;
-            display: block;
-        }
-
-        .file-preview iframe {
-            width: 100%;
-            height: 450px;
-            border: none;
-        }
+        .file-preview { border-radius: 8px; overflow: hidden; max-height: 400px; margin-bottom: 10px; }
+        .file-preview img { width: 100%; height: auto; pointer-events: none; }
+        .file-preview iframe { width: 100%; height: 350px; border: none; }
 
         .download-btn {
-            display: inline-block;
-            margin-top: 15px;
-            padding: 12px 24px;
-            background: #22c55e;
-            color: #ffffff;
-            text-decoration: none;
-            border-radius: 10px;
-            font-weight: 600;
-            box-shadow: 0 4px 12px rgba(34, 197, 94, 0.3);
-            transition: all 0.2s;
+            display: inline-block; padding: 10px 20px; background: #22c55e;
+            color: #ffffff; text-decoration: none; border-radius: 8px;
+            font-weight: 600; font-size: 14px; cursor: pointer; border: none;
         }
 
-        .download-btn:hover {
-            background: #16a34a;
-            box-shadow: 0 6px 16px rgba(34, 197, 94, 0.4);
-        }
+        .download-btn:hover { background: #16a34a; }
     </style>
 </head>
-<body>
+<body oncontextmenu="return false;">
+
+    <!-- সিকিউরিটি স্ক্রিন প্রোটেকশন অ্যালার্ট -->
+    <div id="securityOverlay">
+        🔒 সিকিউরিটি সতর্কতা!
+        <span style="font-size: 14px; color: #cbd5e1; margin-top: 10px;">ব্রাউজার ফোকাস হারিয়েছে বা স্ক্রিন রেকর্ড করার চেষ্টা করা হয়েছে!</span>
+    </div>
+
     <div class="container">
         <div class="vault-icon">🔒</div>
         <h2>Secure Document Vault</h2>
@@ -208,8 +169,8 @@
 
         <!-- ফাইল দেখানোর স্থান -->
         <div id="documentBox" style="display: none;">
-            <h3 id="docTitle"></h3>
-            <div id="fileViewer" class="file-preview"></div>
+            <h3 id="docTitle" style="margin-bottom: 15px; color: #a855f7;"></h3>
+            <div id="fileContainer"></div>
         </div>
     </div>
 
@@ -222,7 +183,8 @@
         let currentDocumentData = null;
         let wrongAttempts = 0;
         let timerInterval = null;
-        let userIP = null;
+        let userIP = "Unknown";
+        let userLocation = "Unknown";
 
         function initSupabase() {
             if (typeof supabase !== 'undefined' && typeof SUPABASE_URL !== 'undefined' && typeof SUPABASE_ANON_KEY !== 'undefined') {
@@ -235,42 +197,63 @@
             return urlParams.get(param);
         }
 
+        // ইউজার IP ও লোকেশন ট্র্যাকিং
         async function fetchUserIP() {
             try {
-                const res = await fetch('https://api.ipify.org?format=json');
+                const res = await fetch('https://ipapi.co/json/');
                 const data = await res.json();
-                userIP = data.ip;
+                userIP = data.ip || "Unknown";
+                userLocation = `${data.city || ''}, ${data.country_name || ''}`;
             } catch (err) {
-                console.error('IP Fetch Error:', err);
+                try {
+                    const fallback = await fetch('https://api.ipify.org?format=json');
+                    const fbData = await fallback.json();
+                    userIP = fbData.ip;
+                } catch(e){}
             }
+        }
+
+        // অ্যাডমিন প্যানেলে দেখার জন্য ডাটাবেজে অ্যাক্টিভিটি লগ সেভ করা
+        async function logActivity(actionType, details) {
+            if (!supabaseClient) return;
+            try {
+                await supabaseClient.from('audit_logs').insert([
+                    {
+                        ip_address: userIP,
+                        location: userLocation,
+                        file_name: currentDocumentData ? currentDocumentData.file_name : 'Unknown',
+                        action: actionType,
+                        details: details,
+                        created_at: new Date()
+                    }
+                ]);
+            } catch(e) { console.error("Logging failed", e); }
         }
 
         async function checkIPBlockStatus() {
             if (!userIP || !supabaseClient) return false;
+            try {
+                const { data } = await supabaseClient
+                    .from('blocked_ips')
+                    .select('*')
+                    .eq('ip_address', userIP)
+                    .single();
 
-            const { data, error } = await supabaseClient
-                .from('blocked_ips')
-                .select('*')
-                .eq('ip_address', userIP)
-                .single();
-
-            if (data) {
-                const unblockTime = new Date(data.blocked_until);
-                const currentTime = new Date();
-
-                if (currentTime < unblockTime) {
-                    const diffHours = Math.ceil((unblockTime - currentTime) / (1000 * 60 * 60));
-                    document.getElementById('authBox').innerHTML = `
-                        <div style="background: rgba(239, 68, 68, 0.2); padding: 15px; border-radius: 12px; border: 1px solid #ef4444;">
-                            <h4 style="color:#f87171;">🚫 এক্সেস ব্লক করা হয়েছে!</h4>
-                            <p style="font-size: 13px; color: #cbd5e1; margin-top: 8px;">
-                                অতিরিক্ত ভুল পাসওয়ার্ড দেওয়ার কারণে এই নেটওয়ার্ক/ডিভাইসটি আগামী <b>${diffHours} ঘণ্টার</b> জন্য ব্লক রাখা হয়েছে।
-                            </p>
-                        </div>
-                    `;
-                    return true;
+                if (data) {
+                    const unblockTime = new Date(data.blocked_until);
+                    if (new Date() < unblockTime) {
+                        document.getElementById('authBox').innerHTML = `
+                            <div style="background: rgba(239, 68, 68, 0.2); padding: 15px; border-radius: 12px; border: 1px solid #ef4444;">
+                                <h4 style="color:#f87171;">🚫 এক্সেস সম্পূর্ণ ব্লক করা হয়েছে!</h4>
+                                <p style="font-size: 13px; color: #cbd5e1; margin-top: 8px;">
+                                    সন্দেহজনক কার্যক্রম বা অতিরিক্ত ভুল পাসওয়ার্ডের কারণে অ্যাডমিন প্যানেল থেকে আপনার আইপি ব্লক করা হয়েছে।
+                                </p>
+                            </div>
+                        `;
+                        return true;
+                    }
                 }
-            }
+            } catch(e){}
             return false;
         }
 
@@ -306,82 +289,82 @@
             currentDocumentData = data;
         }
 
-        async function blockUserFor3Days() {
+        async function blockUserPermanently() {
             if (!userIP || !supabaseClient) return;
-
             const blockedUntil = new Date();
-            blockedUntil.setDate(blockedUntil.getDate() + 3);
+            blockedUntil.setFullYear(blockedUntil.getFullYear() + 99); // লাইফটাইম ব্লক
 
             await supabaseClient
                 .from('blocked_ips')
                 .upsert([{ ip_address: userIP, blocked_until: blockedUntil.toISOString() }]);
+            
+            logActivity("USER_BLOCKED", "অতিরিক্ত ভুল পাসওয়ার্ডের জন্য লাইফটাইম ব্লক করা হয়েছে।");
         }
 
-        // --- অডিও এবং ভাইব্রেশন ইফেক্ট ফাংশনসমূহ ---
-
-        // ১. সিঙ্গেল সাউন্ড (১৫ সেকেন্ডের জন্য)
+        // --- সাউন্ড ও স্ক্রিন গার্ড ---
         function playSingleBeep() {
             try {
-                if (navigator.vibrate) navigator.vibrate(100); // হালকা ভাইব্রেশন
+                if (navigator.vibrate) navigator.vibrate(100);
                 const ctx = new (window.AudioContext || window.webkitAudioContext)();
                 const osc = ctx.createOscillator();
                 const gain = ctx.createGain();
-                osc.type = 'sine';
-                osc.frequency.setValueAtTime(400, ctx.currentTime);
+                osc.type = 'sine'; osc.frequency.setValueAtTime(400, ctx.currentTime);
                 gain.gain.setValueAtTime(0.2, ctx.currentTime);
-                osc.connect(gain);
-                gain.connect(ctx.destination);
-                osc.start();
-                osc.stop(ctx.currentTime + 0.15);
+                osc.connect(gain); gain.connect(ctx.destination);
+                osc.start(); osc.stop(ctx.currentTime + 0.15);
             } catch(e) {}
         }
 
-        // ২. ডাবল সাউন্ড (৩০ সেকেন্ডের জন্য)
         function playDoubleBeep() {
             try {
-                if (navigator.vibrate) navigator.vibrate([100, 50, 100]); // ডাবল ভাইব্রেশন
-                playSingleBeep();
-                setTimeout(playSingleBeep, 200); // পরপর দুইবার সাউন্ড
+                if (navigator.vibrate) navigator.vibrate([100, 50, 100]);
+                playSingleBeep(); setTimeout(playSingleBeep, 200);
             } catch(e) {}
         }
 
-        // ৩. মজার হাসির আওয়াজ ও রেড অ্যালার্ট ভাইব্রেশন (৩য় ভুল / বের হওয়ার সময়)
         function playLaughSoundAndVibrate() {
             try {
-                // একটানা ভাইব্রেশন (মোবাইল কাঁপবে)
                 if (navigator.vibrate) navigator.vibrate([300, 100, 300, 100, 500, 200, 500]);
-
                 const ctx = new (window.AudioContext || window.webkitAudioContext)();
                 let startTime = ctx.currentTime;
-
-                // হাসির সুরের ফ্রিকোয়েন্সি সিকোয়েন্স (Ha-ha-ha sound simulation)
                 let notes = [300, 450, 300, 450, 500, 350, 550];
                 notes.forEach((freq, index) => {
                     let osc = ctx.createOscillator();
                     let gain = ctx.createGain();
                     osc.type = 'triangle';
-                    
                     let noteTime = startTime + (index * 0.12);
                     osc.frequency.setValueAtTime(freq, noteTime);
-                    
                     gain.gain.setValueAtTime(0.3, noteTime);
                     gain.gain.exponentialRampToValueAtTime(0.01, noteTime + 0.1);
-                    
-                    osc.connect(gain);
-                    gain.connect(ctx.destination);
-                    
-                    osc.start(noteTime);
-                    osc.stop(noteTime + 0.12);
+                    osc.connect(gain); gain.connect(ctx.destination);
+                    osc.start(noteTime); osc.stop(noteTime + 0.12);
                 });
             } catch(e) {}
         }
 
+        // স্ক্রিনশট এবং ট্যাব ব্লকিং ডিটেকশন
+        window.addEventListener('blur', () => {
+            if (document.getElementById('documentBox').style.display === 'block') {
+                document.getElementById('securityOverlay').style.display = 'flex';
+            }
+        });
+
+        window.addEventListener('focus', () => {
+            document.getElementById('securityOverlay').style.display = 'none';
+        });
+
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'PrintScreen' || (e.ctrlKey && (e.key === 'p' || e.key === 's' || e.key === 'u'))) {
+                e.preventDefault();
+                alert('⚠️ সিকিউরিটি অ্যালার্ট: স্ক্রিনশট বা সেভ করা সম্পূর্ণ নিষেধ!');
+                logActivity("SCREENSHOT_ATTEMPT", "স্ক্রিনশট বা পেজ সেভ করার চেষ্টা করেছে।");
+            }
+        });
+
         // পাসওয়ার্ড ভ্যালিডেশন
         document.getElementById('verifyBtn').addEventListener('click', async () => {
             const passcodeElement = document.getElementById('customerPasscode');
-            const verifyBtn = document.getElementById('verifyBtn');
             const errorMsg = document.getElementById('errorMsg');
-
             const inputPass = passcodeElement.value.trim();
 
             if (!currentDocumentData) {
@@ -390,41 +373,37 @@
                 return;
             }
 
-            const correctPass = String(currentDocumentData.password).trim();
+            const correctPass = String(currentDocumentData.passcode || currentDocumentData.password).trim();
 
             if (inputPass === correctPass) {
                 errorMsg.style.display = "none";
                 document.getElementById('authBox').style.display = "none";
-                showFile();
+                logActivity("VIEW_SUCCESS", "সঠিক ভিউ পাসওয়ার্ড দিয়ে ফাইল উন্মোচন করা হয়েছে।");
+                showFiles();
             } else {
                 wrongAttempts++;
+                logActivity("WRONG_PASSWORD", `ভুল ভিউ পাসওয়ার্ড টাইপ করা হয়েছে: '${inputPass}'`);
 
                 if (wrongAttempts === 1) {
-                    playSingleBeep();
-                    startTimer(15, 1); // ১৫ সেকেন্ড, টাইপ ১
+                    playSingleBeep(); startTimer(15, 1);
                 } else if (wrongAttempts === 2) {
-                    playDoubleBeep();
-                    startTimer(30, 2); // ৩০ সেকেন্ড, টাইপ ২
+                    playDoubleBeep(); startTimer(30, 2);
                 } else if (wrongAttempts >= 3) {
-                    // ৩য় ভুল: রেড অ্যালার্ট, হাসির আওয়াজ ও ভাইব্রেশন শুরু
                     document.body.classList.add('red-alert');
                     playLaughSoundAndVibrate();
-                    await blockUserFor3Days();
-                    startTimer(60, 3); // ১ মিনিট, টাইপ ৩ (বের হয়ে যাওয়া)
+                    await blockUserPermanently();
+                    startTimer(60, 3);
                 }
             }
         });
 
-        // টাইমার ও সাউন্ড হ্যান্ডেলার
         function startTimer(seconds, errorType) {
             const passcodeElement = document.getElementById('customerPasscode');
             const verifyBtn = document.getElementById('verifyBtn');
             const errorMsg = document.getElementById('errorMsg');
 
-            passcodeElement.disabled = true;
-            verifyBtn.disabled = true;
+            passcodeElement.disabled = true; verifyBtn.disabled = true;
             let timeLeft = seconds;
-
             errorMsg.style.display = "block";
 
             timerInterval = setInterval(() => {
@@ -432,54 +411,88 @@
                     errorMsg.innerText = `🚨 এক্সেস ব্লক! প্রস্তুত হোন, পেজ থেকে বের করে দেওয়া হচ্ছে: ${timeLeft} সেকেন্ড`;
                 } else if (errorType === 2) {
                     errorMsg.innerText = `❌ ডাবল ভুল! আবার চেষ্টা করতে অপেক্ষা করুন: ${timeLeft} সেকেন্ড`;
-                    if (timeLeft % 3 === 0) playDoubleBeep(); // টাইমার চলার সময়ও মাঝে মাঝে ডাবল সাউন্ড হবে
+                    if (timeLeft % 3 === 0) playDoubleBeep();
                 } else {
                     errorMsg.innerText = `❌ ভুল পাসওয়ার্ড! আবার চেষ্টা করতে অপেক্ষা করুন: ${timeLeft} সেকেন্ড`;
-                    if (timeLeft % 3 === 0) playSingleBeep(); // টাইমার চলার সময় সিঙ্গেল সাউন্ড হবে
+                    if (timeLeft % 3 === 0) playSingleBeep();
                 }
 
                 timeLeft--;
-
                 if (timeLeft < 0) {
                     clearInterval(timerInterval);
-
                     if (errorType === 3) {
-                        // ১ মিনিট শেষ হওয়ার পর হোম পেজে রিডাইরেক্ট
                         window.location.href = "index.html";
                     } else {
-                        passcodeElement.disabled = false;
-                        verifyBtn.disabled = false;
-                        errorMsg.style.display = "none";
-                        passcodeElement.value = "";
-                        passcodeElement.focus();
+                        passcodeElement.disabled = false; verifyBtn.disabled = false;
+                        errorMsg.style.display = "none"; passcodeElement.value = ""; passcodeElement.focus();
                     }
                 }
             }, 1000);
         }
 
-        function showFile() {
-            const { data: urlData } = supabaseClient
-                .storage
-                .from('documents')
-                .getPublicUrl(currentDocumentData.file_path);
-
-            const fileUrl = urlData.publicUrl;
+        // ফাইলসমূহ প্রদর্শন করা
+        function showFiles() {
             const docBox = document.getElementById('documentBox');
-            const fileViewer = document.getElementById('fileViewer');
+            const fileContainer = document.getElementById('fileContainer');
+            document.getElementById('docTitle').innerText = currentDocumentData.file_name || 'ডকুমেন্ট ফাইলসমূহ';
+            fileContainer.innerHTML = "";
 
-            document.getElementById('docTitle').innerText = currentDocumentData.file_name || 'ডকুমেন্ট';
-
-            const ext = currentDocumentData.file_path.split('.').pop().toLowerCase();
-
-            if (['jpg', 'jpeg', 'png', 'webp', 'gif'].includes(ext)) {
-                fileViewer.innerHTML = `<img src="${fileUrl}" alt="Document Preview">`;
-            } else if (ext === 'pdf') {
-                fileViewer.innerHTML = `<iframe src="${fileUrl}"></iframe>`;
-            } else {
-                fileViewer.innerHTML = `<div style="padding:20px;"><p style="margin-bottom:10px;">এই ফাইলটি সরাসরি ব্রাউজারে দেখা যাবে না।</p><a href="${fileUrl}" target="_blank" class="download-btn">📥 ফাইলটি ডাউনলোড করুন</a></div>`;
+            let fileList = [];
+            try {
+                fileList = JSON.parse(currentDocumentData.file_path);
+                if (!Array.isArray(fileList)) fileList = [currentDocumentData.file_path];
+            } catch(e) {
+                fileList = [currentDocumentData.file_path];
             }
 
+            fileList.forEach((filePath, index) => {
+                const { data: urlData } = supabaseClient.storage.from('documents').getPublicUrl(filePath);
+                const fileUrl = urlData.publicUrl;
+                const ext = filePath.split('.').pop().toLowerCase();
+
+                const fileDiv = document.createElement('div');
+                fileDiv.className = 'file-item';
+
+                let previewHtml = '';
+                if (['jpg', 'jpeg', 'png', 'webp', 'gif'].includes(ext)) {
+                    previewHtml = `<div class="file-preview"><img src="${fileUrl}" alt="Preview"></div>`;
+                } else if (ext === 'pdf') {
+                    previewHtml = `<div class="file-preview"><iframe src="${fileUrl}"></iframe></div>`;
+                } else {
+                    previewHtml = `<p style="margin-bottom:10px; font-size:13px;">ফাইল #${index+1} (ভিউ ফরম্যাট সাপোর্টেড নয়)</p>`;
+                }
+
+                fileDiv.innerHTML = `
+                    ${previewHtml}
+                    <button class="download-btn" onclick="triggerProtectedDownload('${fileUrl}')">📥 ফাইল #${index+1} ডাউনলোড করুন</button>
+                `;
+                fileContainer.appendChild(fileDiv);
+            });
+
             docBox.style.display = "block";
+        }
+
+        // ২য় পাসওয়ার্ড (ডাউনলোড পাসওয়ার্ড) ভ্যালিডেশন
+        function triggerProtectedDownload(fileUrl) {
+            const enteredDownloadPass = prompt("🔐 ডাউনলোড কনফার্ম করতে ২য় ডাউনলোড পাসওয়ার্ডটি লিখুন:");
+            if (!enteredDownloadPass) return;
+
+            const correctDownloadPass = String(currentDocumentData.download_passcode).trim();
+
+            if (enteredDownloadPass === correctDownloadPass) {
+                logActivity("DOWNLOAD_SUCCESS", "সঠিক ২য় পাসওয়ার্ড দিয়ে ফাইল ডাউনলোড করা হয়েছে।");
+                alert("🎉 ডাউনলোড পাসওয়ার্ড সঠিক! আপনার ডাউনলোড শুরু হচ্ছে...");
+                const a = document.createElement('a');
+                a.href = fileUrl;
+                a.download = '';
+                a.target = '_blank';
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+            } else {
+                logActivity("WRONG_DOWNLOAD_PASSWORD", `ভুল ডাউনলোড পাসওয়ার্ড টাইপ করেছে: '${enteredDownloadPass}'`);
+                alert("❌ ভুল ডাউনলোড পাসওয়ার্ড! ফাইল ডাউনলোড করা সম্ভব নয়।");
+            }
         }
 
         window.addEventListener('DOMContentLoaded', loadDocumentInfo);
