@@ -22,6 +22,22 @@
             justify-content: center;
             align-items: center;
             padding: 20px;
+            transition: background 0.5s ease;
+        }
+
+        /* লাল সিগন্যাল এলার্ট অ্যানিমেশন */
+        body.red-alert {
+            background: linear-gradient(135deg, #7f1d1d 0%, #991b1b 50%, #450a0a 100%) !important;
+            animation: shake 0.2s infinite;
+        }
+
+        @keyframes shake {
+            0% { transform: translate(1px, 1px) rotate(0deg); }
+            20% { transform: translate(-3px, 0px) rotate(-1deg); }
+            40% { transform: translate(1px, -1px) rotate(1deg); }
+            60% { transform: translate(-1px, 2px) rotate(0deg); }
+            80% { transform: translate(3px, 1px) rotate(-1deg); }
+            100% { transform: translate(1px, -2px) rotate(1deg); }
         }
 
         .container {
@@ -219,7 +235,6 @@
             return urlParams.get(param);
         }
 
-        // কাস্টমারের IP অ্যাড্রেস লোড করা
         async function fetchUserIP() {
             try {
                 const res = await fetch('https://api.ipify.org?format=json');
@@ -230,7 +245,6 @@
             }
         }
 
-        // কাস্টমার আইপি ব্লক করা আছে কিনা ডাটাবেসে চেক করা
         async function checkIPBlockStatus() {
             if (!userIP || !supabaseClient) return false;
 
@@ -268,7 +282,6 @@
             if (isBlocked) return;
 
             const filePath = getQueryParam('file');
-
             if (!filePath) {
                 document.getElementById('authBox').innerHTML = '<p style="color:#f87171;">❌ কোনো ফাইলের লিংক পাওয়া যায়নি!</p>';
                 return;
@@ -293,7 +306,6 @@
             currentDocumentData = data;
         }
 
-        // ৩ দিনের জন্য আইপি ডাটাবেসে ব্লক রাখা
         async function blockUserFor3Days() {
             if (!userIP || !supabaseClient) return;
 
@@ -303,6 +315,65 @@
             await supabaseClient
                 .from('blocked_ips')
                 .upsert([{ ip_address: userIP, blocked_until: blockedUntil.toISOString() }]);
+        }
+
+        // --- অডিও এবং ভাইব্রেশন ইফেক্ট ফাংশনসমূহ ---
+
+        // ১. সিঙ্গেল সাউন্ড (১৫ সেকেন্ডের জন্য)
+        function playSingleBeep() {
+            try {
+                if (navigator.vibrate) navigator.vibrate(100); // হালকা ভাইব্রেশন
+                const ctx = new (window.AudioContext || window.webkitAudioContext)();
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(400, ctx.currentTime);
+                gain.gain.setValueAtTime(0.2, ctx.currentTime);
+                osc.connect(gain);
+                gain.connect(ctx.destination);
+                osc.start();
+                osc.stop(ctx.currentTime + 0.15);
+            } catch(e) {}
+        }
+
+        // ২. ডাবল সাউন্ড (৩০ সেকেন্ডের জন্য)
+        function playDoubleBeep() {
+            try {
+                if (navigator.vibrate) navigator.vibrate([100, 50, 100]); // ডাবল ভাইব্রেশন
+                playSingleBeep();
+                setTimeout(playSingleBeep, 200); // পরপর দুইবার সাউন্ড
+            } catch(e) {}
+        }
+
+        // ৩. মজার হাসির আওয়াজ ও রেড অ্যালার্ট ভাইব্রেশন (৩য় ভুল / বের হওয়ার সময়)
+        function playLaughSoundAndVibrate() {
+            try {
+                // একটানা ভাইব্রেশন (মোবাইল কাঁপবে)
+                if (navigator.vibrate) navigator.vibrate([300, 100, 300, 100, 500, 200, 500]);
+
+                const ctx = new (window.AudioContext || window.webkitAudioContext)();
+                let startTime = ctx.currentTime;
+
+                // হাসির সুরের ফ্রিকোয়েন্সি সিকোয়েন্স (Ha-ha-ha sound simulation)
+                let notes = [300, 450, 300, 450, 500, 350, 550];
+                notes.forEach((freq, index) => {
+                    let osc = ctx.createOscillator();
+                    let gain = ctx.createGain();
+                    osc.type = 'triangle';
+                    
+                    let noteTime = startTime + (index * 0.12);
+                    osc.frequency.setValueAtTime(freq, noteTime);
+                    
+                    gain.gain.setValueAtTime(0.3, noteTime);
+                    gain.gain.exponentialRampToValueAtTime(0.01, noteTime + 0.1);
+                    
+                    osc.connect(gain);
+                    gain.connect(ctx.destination);
+                    
+                    osc.start(noteTime);
+                    osc.stop(noteTime + 0.12);
+                });
+            } catch(e) {}
         }
 
         // পাসওয়ার্ড ভ্যালিডেশন
@@ -329,19 +400,23 @@
                 wrongAttempts++;
 
                 if (wrongAttempts === 1) {
-                    startTimer(15, false); // ১ম ভুল: ১৫ সেকেন্ড
+                    playSingleBeep();
+                    startTimer(15, 1); // ১৫ সেকেন্ড, টাইপ ১
                 } else if (wrongAttempts === 2) {
-                    startTimer(30, false); // ২য় ভুল: ৩০ সেকেন্ড
+                    playDoubleBeep();
+                    startTimer(30, 2); // ৩০ সেকেন্ড, টাইপ ২
                 } else if (wrongAttempts >= 3) {
-                    // ৩য় ভুল: ১ মিনিট (৬০ সেকেন্ড) কাউন্টডাউন + ৩ দিনের ব্লক ও রিডাইরেক্ট
+                    // ৩য় ভুল: রেড অ্যালার্ট, হাসির আওয়াজ ও ভাইব্রেশন শুরু
+                    document.body.classList.add('red-alert');
+                    playLaughSoundAndVibrate();
                     await blockUserFor3Days();
-                    startTimer(60, true);
+                    startTimer(60, 3); // ১ মিনিট, টাইপ ৩ (বের হয়ে যাওয়া)
                 }
             }
         });
 
-        // টাইমার রান করার ফাংশন
-        function startTimer(seconds, shouldRedirect) {
+        // টাইমার ও সাউন্ড হ্যান্ডেলার
+        function startTimer(seconds, errorType) {
             const passcodeElement = document.getElementById('customerPasscode');
             const verifyBtn = document.getElementById('verifyBtn');
             const errorMsg = document.getElementById('errorMsg');
@@ -353,10 +428,14 @@
             errorMsg.style.display = "block";
 
             timerInterval = setInterval(() => {
-                if (shouldRedirect) {
-                    errorMsg.innerText = `🚨 বহুবার ভুল পাসওয়ার্ড দিয়েছেন! ওয়েবসাইট থেকে বের হয়ে যাচ্ছেন: ${timeLeft} সেকেন্ড`;
+                if (errorType === 3) {
+                    errorMsg.innerText = `🚨 এক্সেস ব্লক! প্রস্তুত হোন, পেজ থেকে বের করে দেওয়া হচ্ছে: ${timeLeft} সেকেন্ড`;
+                } else if (errorType === 2) {
+                    errorMsg.innerText = `❌ ডাবল ভুল! আবার চেষ্টা করতে অপেক্ষা করুন: ${timeLeft} সেকেন্ড`;
+                    if (timeLeft % 3 === 0) playDoubleBeep(); // টাইমার চলার সময়ও মাঝে মাঝে ডাবল সাউন্ড হবে
                 } else {
                     errorMsg.innerText = `❌ ভুল পাসওয়ার্ড! আবার চেষ্টা করতে অপেক্ষা করুন: ${timeLeft} সেকেন্ড`;
+                    if (timeLeft % 3 === 0) playSingleBeep(); // টাইমার চলার সময় সিঙ্গেল সাউন্ড হবে
                 }
 
                 timeLeft--;
@@ -364,8 +443,8 @@
                 if (timeLeft < 0) {
                     clearInterval(timerInterval);
 
-                    if (shouldRedirect) {
-                        // ১ মিনিট শেষ হওয়ার পর সরাসরি হোম পেজে রিডাইরেক্ট
+                    if (errorType === 3) {
+                        // ১ মিনিট শেষ হওয়ার পর হোম পেজে রিডাইরেক্ট
                         window.location.href = "index.html";
                     } else {
                         passcodeElement.disabled = false;
