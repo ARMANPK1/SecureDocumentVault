@@ -25,6 +25,25 @@
             align-items: center;
             padding: 20px;
             transition: background 0.5s ease;
+            position: relative;
+        }
+
+        /* 🏷️ ডান কোণায় ক্রিয়েটর ক্রেডিট স্টাইল */
+        .creator-tag {
+            position: fixed;
+            top: 15px;
+            right: 20px;
+            color: #ffffff;
+            font-size: 14px;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+            z-index: 10000;
+            background: rgba(255, 255, 255, 0.1);
+            padding: 6px 14px;
+            border-radius: 20px;
+            backdrop-filter: blur(8px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            box-shadow: 0 4px 10px rgba(0,0,0,0.3);
         }
 
         /* ২য় ভুলের জন্য হলুদ ডিসপ্লে */
@@ -135,9 +154,33 @@
         .file-item {
             background: rgba(0, 0, 0, 0.3); border-radius: 12px;
             padding: 15px; margin-bottom: 15px; border: 1px solid rgba(255, 255, 255, 0.1);
+            position: relative;
         }
 
-        .file-preview { border-radius: 8px; overflow: hidden; max-height: 400px; margin-bottom: 10px; }
+        /* 🌊 ভিউ মোডের ওয়াটারমার্ক ও ব্লার ইফেক্ট */
+        .file-preview-restricted {
+            filter: blur(4px);
+            pointer-events: none;
+        }
+
+        .watermark-overlay {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 18px;
+            color: rgba(255, 255, 255, 0.7);
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            pointer-events: none;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 8px;
+            z-index: 5;
+        }
+
+        .file-preview { border-radius: 8px; overflow: hidden; max-height: 400px; margin-bottom: 10px; position: relative; }
         .file-preview img { width: 100%; height: auto; pointer-events: none; }
         .file-preview iframe { width: 100%; height: 350px; border: none; }
 
@@ -151,6 +194,9 @@
     </style>
 </head>
 <body oncontextmenu="return false;">
+
+    <!-- 🏷️ উপরের ডান পাশে সাদা টেক্সটে ক্রেডিট -->
+    <div class="creator-tag">Created by, B M ARSAD ALI</div>
 
     <div id="securityOverlay">
         🔒 সিকিউরিটি সতর্কতা!
@@ -188,6 +234,7 @@
         let continuousVibrateInterval = null;
         let userIP = "Unknown";
         let userLocation = "Unknown";
+        let isDownloadMode = false;
 
         function initSupabase() {
             if (typeof supabase !== 'undefined' && typeof SUPABASE_URL !== 'undefined' && typeof SUPABASE_ANON_KEY !== 'undefined') {
@@ -213,6 +260,19 @@
                     userIP = fbData.ip;
                 } catch(e){}
             }
+        }
+
+        // 🟢 রিয়েল-টাইম ইউজার ট্র্যাকিং (অ্যাডমিন প্যানেলে দেখার জন্য)
+        function setupPresence() {
+            if (!supabaseClient) return;
+            const room = supabaseClient.channel('online_users', {
+                config: { presence: { key: 'user_' + Date.now() } }
+            });
+            room.subscribe(async (status) => {
+                if (status === 'SUBSCRIBED') {
+                    await room.track({ online_at: new Date().toISOString() });
+                }
+            });
         }
 
         async function logActivity(actionType, details) {
@@ -261,6 +321,7 @@
         async function loadDocumentInfo() {
             initSupabase();
             await fetchUserIP();
+            setupPresence();
 
             const isBlocked = await checkIPBlockStatus();
             if (isBlocked) return;
@@ -290,11 +351,10 @@
             currentDocumentData = data;
         }
 
-        // 📌 ৪থ ভুলের জন্য ৩ দিনের আইপি ব্লক
         async function blockUserFor3Days() {
             if (!userIP || !supabaseClient) return;
             const blockedUntil = new Date();
-            blockedUntil.setDate(blockedUntil.getDate() + 3); // ৩ দিনের জন্য ব্লক
+            blockedUntil.setDate(blockedUntil.getDate() + 3);
 
             await supabaseClient
                 .from('blocked_ips')
@@ -303,10 +363,9 @@
             logActivity("USER_BLOCKED_3_DAYS", "৪টি ভুল পাসওয়ার্ড দেওয়ার জন্য ৩ দিনের জন্য ব্লক করা হয়েছে।");
         }
 
-        // --- 🔊 সাউন্ড ও ভাইব্রেশন ফাংশনসমূহ ---
         function playSingleBeep() {
             try {
-                if (navigator.vibrate) navigator.vibrate(200); // ১ম ভুলে ভাইব্রেশন
+                if (navigator.vibrate) navigator.vibrate(200);
                 const ctx = new (window.AudioContext || window.webkitAudioContext)();
                 const osc = ctx.createOscillator();
                 const gain = ctx.createGain();
@@ -319,14 +378,14 @@
 
         function playDoubleBeep() {
             try {
-                if (navigator.vibrate) navigator.vibrate([200, 100, 200]); // ২য় ভুলে ডাবল ভাইব্রেশন
+                if (navigator.vibrate) navigator.vibrate([200, 100, 200]);
                 playSingleBeep(); setTimeout(playSingleBeep, 200);
             } catch(e) {}
         }
 
         function playLaughSoundAndVibrate() {
             try {
-                if (navigator.vibrate) navigator.vibrate([300, 100, 300, 100, 500, 200, 500]); // ৩য় ভুলে স্ট্রং ভাইব্রেশন
+                if (navigator.vibrate) navigator.vibrate([300, 100, 300, 100, 500, 200, 500]);
                 const ctx = new (window.AudioContext || window.webkitAudioContext)();
                 let startTime = ctx.currentTime;
                 let notes = [300, 450, 300, 450, 500, 350, 550];
@@ -344,7 +403,6 @@
             } catch(e) {}
         }
 
-        // 📱 ৪থ ভুলের পর একটানা ভাইব্রেট শুরু করার লুপ
         function startContinuousVibration() {
             if (navigator.vibrate) {
                 navigator.vibrate([1000, 200, 1000, 200]);
@@ -354,7 +412,6 @@
             }
         }
 
-        // স্ক্রিনশট এবং ফোকাস লজিক
         window.addEventListener('blur', () => {
             if (document.getElementById('documentBox').style.display === 'block') {
                 document.getElementById('securityOverlay').style.display = 'flex';
@@ -373,7 +430,7 @@
             }
         });
 
-        // পাসওয়ার্ড ভ্যালিডেশন
+        // পাসওয়ার্ড ভ্যালিডেশন (পাসওয়ার্ড ১ ও ২ চেক)
         document.getElementById('verifyBtn').addEventListener('click', async () => {
             const passcodeElement = document.getElementById('customerPasscode');
             const errorMsg = document.getElementById('errorMsg');
@@ -385,43 +442,51 @@
                 return;
             }
 
-            const correctPass = String(currentDocumentData.passcode || currentDocumentData.password).trim();
+            const viewPass = String(currentDocumentData.passcode || currentDocumentData.password).trim();
+            const downloadPass = String(currentDocumentData.download_passcode).trim();
 
-            if (inputPass === correctPass) {
+            // 🟢 পাসওয়ার্ড ২ (ডাউনলোড পাসওয়ার্ড) দিলে: ফুল ক্লিয়ার ভিউ + ডাউনলোড মোড
+            if (inputPass === downloadPass) {
+                isDownloadMode = true;
                 errorMsg.style.display = "none";
                 document.getElementById('authBox').style.display = "none";
                 document.body.classList.remove('yellow-alert', 'red-alert');
-                logActivity("VIEW_SUCCESS", "সঠিক ভিউ পাসওয়ার্ড দিয়ে ফাইল উন্মোচন করা হয়েছে।");
+                logActivity("DOWNLOAD_ACCESS_GRANTED", "পাসওয়ার্ড ২ দিয়ে ফুল ডাউনলোড এক্সেস লাভ করেছে।");
                 showFiles();
-            } else {
+            }
+            // 🟡 পাসওয়ার্ড ১ (ভিউ পাসওয়ার্ড) দিলে: ব্লার/ওয়াটারমার্ক ভিউ (ডাউনলোড হবে না)
+            else if (inputPass === viewPass) {
+                isDownloadMode = false;
+                errorMsg.style.display = "none";
+                document.getElementById('authBox').style.display = "none";
+                document.body.classList.remove('yellow-alert', 'red-alert');
+                logActivity("VIEW_ONLY_GRANTED", "পাসওয়ার্ড ১ দিয়ে কেবল ভিউ এক্সেস লাভ করেছে।");
+                showFiles();
+            } 
+            else {
                 wrongAttempts++;
-                logActivity("WRONG_PASSWORD", `ভুল ভিউ পাসওয়ার্ড টাইপ করা হয়েছে (চেষ্টা নম্বর ${wrongAttempts}): '${inputPass}'`);
+                logActivity("WRONG_PASSWORD", `ভুল পাসওয়ার্ড টাইপ করা হয়েছে (চেষ্টা নম্বর ${wrongAttempts}): '${inputPass}'`);
 
-                // 🟢 ১ম ভুল: ১৫ সেকেন্ড টাইমার + সিঙ্গল বিপ
                 if (wrongAttempts === 1) {
                     playSingleBeep();
                     startTimer(15, 1);
                 } 
-                // 🟡 ২য় ভুল: ৩০ সেকেন্ড টাইমার + ডাবল বিপ + হলুদ ডিসপ্লে
                 else if (wrongAttempts === 2) {
                     document.body.classList.add('yellow-alert');
                     playDoubleBeep();
                     startTimer(30, 2);
                 } 
-                // 🔴 ৩য় ভুল: ৬০ সেকেন্ড টাইমার + হাসির শব্দ + লাল ডিসপ্লে
                 else if (wrongAttempts === 3) {
                     document.body.classList.remove('yellow-alert');
                     document.body.classList.add('red-alert');
                     playLaughSoundAndVibrate();
                     startTimer(60, 3);
                 } 
-                // 🚫 ৪থ ভুল: ইনপুট বন্ধ + ৩ দিন আইপি ব্লক + লুপ ভাইব্রেশন + হোম পেজে রিডাইরেক্ট
                 else if (wrongAttempts >= 4) {
                     document.body.classList.remove('yellow-alert');
                     document.body.classList.add('red-alert');
                     startContinuousVibration();
                     
-                    // ইনপুট ফর্ম সম্পূর্ণ মুছে দেয়া
                     document.getElementById('authBox').innerHTML = `
                         <div style="background: rgba(239, 68, 68, 0.3); padding: 20px; border-radius: 12px; border: 2px solid #ef4444;">
                             <h3 style="color:#ffffff;">🚨 এক্সেস ব্লক করা হয়েছে!</h3>
@@ -433,7 +498,6 @@
 
                     await blockUserFor3Days();
 
-                    // ৩ সেকেন্ড পর হোমপেজে রিডাইরেক্ট
                     setTimeout(() => {
                         window.location.href = "index.html";
                     }, 3000);
@@ -495,17 +559,33 @@
                 fileDiv.className = 'file-item';
 
                 let previewHtml = '';
+                // ডাউনলোড মোড না হলে ছবি ঝাপসা এবং ওয়াটারমার্ক দেখাবে
+                const previewClass = isDownloadMode ? '' : 'file-preview-restricted';
+                const watermarkHtml = isDownloadMode ? '' : '<div class="watermark-overlay">ONLY FOR VIEWING</div>';
+
                 if (['jpg', 'jpeg', 'png', 'webp', 'gif'].includes(ext)) {
-                    previewHtml = `<div class="file-preview"><img src="${fileUrl}" alt="Preview"></div>`;
+                    previewHtml = `
+                        <div class="file-preview">
+                            ${watermarkHtml}
+                            <img src="${fileUrl}" class="${previewClass}" alt="Preview">
+                        </div>`;
                 } else if (ext === 'pdf') {
-                    previewHtml = `<div class="file-preview"><iframe src="${fileUrl}"></iframe></div>`;
+                    previewHtml = `
+                        <div class="file-preview">
+                            ${watermarkHtml}
+                            <iframe src="${fileUrl}" class="${previewClass}"></iframe>
+                        </div>`;
                 } else {
                     previewHtml = `<p style="margin-bottom:10px; font-size:13px;">ফাইল #${index+1} (ভিউ ফরম্যাট সাপোর্টেড নয়)</p>`;
                 }
 
+                const downloadBtnHtml = isDownloadMode 
+                    ? `<button class="download-btn" onclick="triggerProtectedDownload('${fileUrl}')">📥 ফাইল #${index+1} ডাউনলোড করুন</button>`
+                    : `<p style="color:#f87171; font-size:12px; margin-top:5px;">⚠️ ডাউনলোড করতে পাসওয়ার্ড ২ দিয়ে লগইন করতে হবে।</p>`;
+
                 fileDiv.innerHTML = `
                     ${previewHtml}
-                    <button class="download-btn" onclick="triggerProtectedDownload('${fileUrl}')">📥 ফাইল #${index+1} ডাউনলোড করুন</button>
+                    ${downloadBtnHtml}
                 `;
                 fileContainer.appendChild(fileDiv);
             });
@@ -513,27 +593,19 @@
             docBox.style.display = "block";
         }
 
-        // ২য় পাসওয়ার্ড (ডাউনলোড পাসওয়ার্ড) ভ্যালিডেশন
         function triggerProtectedDownload(fileUrl) {
-            const enteredDownloadPass = prompt("🔐 ডাউনলোড কনফার্ম করতে ২য় ডাউনলোড পাসওয়ার্ডটি লিখুন:");
-            if (!enteredDownloadPass) return;
-
-            const correctDownloadPass = String(currentDocumentData.download_passcode).trim();
-
-            if (enteredDownloadPass === correctDownloadPass) {
-                logActivity("DOWNLOAD_SUCCESS", "সঠিক ২য় পাসওয়ার্ড দিয়ে ফাইল ডাউনলোড করা হয়েছে।");
-                alert("🎉 ডাউনলোড পাসওয়ার্ড সঠিক! আপনার ডাউনলোড শুরু হচ্ছে...");
-                const a = document.createElement('a');
-                a.href = fileUrl;
-                a.download = '';
-                a.target = '_blank';
-                document.body.appendChild(a);
-                a.click();
-                document.body.removeChild(a);
-            } else {
-                logActivity("WRONG_DOWNLOAD_PASSWORD", `ভুল ডাউনলোড পাসওয়ার্ড টাইপ করেছে: '${enteredDownloadPass}'`);
-                alert("❌ ভুল ডাউনলোড পাসওয়ার্ড! ফাইল ডাউনলোড করা সম্ভব নয়।");
+            if (!isDownloadMode) {
+                alert("❌ আপনার কেবল দেখার অনুমতি রয়েছে। ফাইলটি ডাউনলোড করতে পাসওয়ার্ড ২ দিয়ে প্রবেশ করুন।");
+                return;
             }
+            logActivity("DOWNLOAD_SUCCESS", "ফাইল ডাউনলোড করা হয়েছে।");
+            const a = document.createElement('a');
+            a.href = fileUrl;
+            a.download = '';
+            a.target = '_blank';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
         }
 
         window.addEventListener('DOMContentLoaded', loadDocumentInfo);
