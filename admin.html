@@ -6,7 +6,6 @@
     <title>Secure Vault Admin</title>
     <link rel="stylesheet" href="style.css">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <!-- QR Code Generator Library -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <style>
         .notification-banner {
@@ -25,7 +24,6 @@
             box-shadow: 0px 4px 10px rgba(0,0,0,0.3);
         }
 
-        /* Modal / Popup for QR Code */
         #qrModal {
             position: fixed;
             top: 0; left: 0; width: 100%; height: 100%;
@@ -61,6 +59,18 @@
         .btn-qr { background: #8b5cf6; }
         .btn-share { background: #10b981; }
         .btn-delete { background: #ef4444; }
+
+        .active-users-card {
+            background: #10b981;
+            color: white;
+            padding: 12px;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: bold;
+            text-align: center;
+            margin-bottom: 15px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
     </style>
 </head>
 <body>
@@ -71,6 +81,11 @@
 
     <div class="container">
         <h2>🔒 Secure Vault Admin</h2>
+
+        <!-- রিয়েল-টাইম কতজন ইউজার ওয়েবসাইটে একটিভ আছে তা দেখাবে -->
+        <div class="active-users-card">
+            🟢 বর্তমানে ওয়েবসাইটে একটিভ ইউজার: <span id="onlineCount">0</span> জন
+        </div>
         
         <div style="text-align: center; margin-bottom: 15px;">
             <a href="index.html" style="color: #6a11cb; font-weight: bold; text-decoration: none;">User View</a>
@@ -175,11 +190,11 @@
                 const gain = ctx.createGain();
                 osc.type = 'sine';
                 osc.frequency.value = 800; 
-                gain.gain.value = 0.1; 
+                gain.gain.value = 0.2; 
                 osc.connect(gain);
                 gain.connect(ctx.destination);
                 osc.start();
-                setTimeout(() => osc.stop(), 300);
+                setTimeout(() => osc.stop(), 500);
             } catch (e) {}
         }
 
@@ -193,6 +208,7 @@
             }, 5000);
         }
 
+        // ১. রিয়েল-টাইম সিকিউরিটি অ্যালার্ট ও পাসওয়ার্ড ভুল মনিটরিং
         function subscribeToAuditLogs() {
             if (!supabaseClient) return;
 
@@ -202,7 +218,7 @@
                     'postgres_changes',
                     { event: 'INSERT', schema: 'public', table: 'audit_logs' },
                     (payload) => {
-                        if (payload.new && payload.new.action === 'WRONG_PASSWORD') {
+                        if (payload.new && (payload.new.action === 'WRONG_PASSWORD' || payload.new.action === 'FAILED_LOGIN')) {
                             triggerSecurityAlert();
                         }
                     }
@@ -210,67 +226,82 @@
                 .subscribe();
         }
 
-async function uploadFiles() {
-    const title = document.getElementById('docTitle').value.trim();
-    const vPass = document.getElementById('viewPass').value.trim();
-    const dPass = document.getElementById('downloadPass').value.trim();
-    const fileInput = document.getElementById('fileInput');
-    const status = document.getElementById('status');
+        // ২. রিয়েল-টাইম ইউজার ট্র্যাকিং (কে পেজে আসলো বা গেল)
+        function trackRealtimeUsers() {
+            if (!supabaseClient) return;
 
-    if (!title || !vPass || !dPass || fileInput.files.length === 0) {
-        alert("অনুগ্রহ করে শিরোনাম, পাসওয়ার্ড এবং অন্তত একটি ফাইল সিলেক্ট করুন!");
-        return;
-    }
-
-    status.style.color = "blue";
-    status.innerText = "আপলোড হচ্ছে, অনুগ্রহ করে অপেক্ষা করুন...";
-
-    let uploadedPaths = [];
-
-    for (let i = 0; i < fileInput.files.length; i++) {
-        const file = fileInput.files[i];
-        const fileExt = file.name.split('.').pop();
-        const fileName = `${Date.now()}_${Math.random().toString(36).substring(7)}.${fileExt}`;
-
-        // আপলোড প্যারামিটারে cacheControl ও upsert যোগ করা হয়েছে
-        const { data, error } = await supabaseClient.storage
-            .from('documents')
-            .upload(fileName, file, {
-                cacheControl: '3600',
-                upsert: false
+            const room = supabaseClient.channel('online_users', {
+                config: { presence: { key: 'admin' } }
             });
 
-        if (error) {
-            status.style.color = "red";
-            status.innerText = "❌ স্টোরেজ এরর: " + error.message;
-            return;
+            room.on('presence', { event: 'sync' }, () => {
+                const newState = room.presenceState();
+                let count = Object.keys(newState).length;
+                document.getElementById('onlineCount').innerText = count;
+            });
+
+            room.subscribe();
         }
-        uploadedPaths.push(data.path);
-    }
 
-    const { data, error } = await supabaseClient
-        .from('documents')
-        .insert([
-            { 
-                file_name: title, 
-                file_path: JSON.stringify(uploadedPaths), 
-                passcode: vPass,
-                download_passcode: dPass
+        async function uploadFiles() {
+            const title = document.getElementById('docTitle').value.trim();
+            const vPass = document.getElementById('viewPass').value.trim();
+            const dPass = document.getElementById('downloadPass').value.trim();
+            const fileInput = document.getElementById('fileInput');
+            const status = document.getElementById('status');
+
+            if (!title || !vPass || !dPass || fileInput.files.length === 0) {
+                alert("অনুগ্রহ করে শিরোনাম, পাসওয়ার্ড এবং অন্তত একটি ফাইল সিলেক্ট করুন!");
+                return;
             }
-        ]);
 
-    if (error) {
-        status.style.color = "red";
-        status.innerText = "❌ ডাটাবেজ এরর: " + error.message;
-    } else {
-        status.style.color = "green";
-        status.innerText = "🎉 ফাইল সফলভাবে আপলোড হয়েছে!";
-        document.getElementById('docTitle').value = '';
-        fileInput.value = '';
-        generateRandomPass();
-        loadUploadedFiles();
-    }
-}
+            status.style.color = "blue";
+            status.innerText = "আপলোড হচ্ছে, অনুগ্রহ করে অপেক্ষা করুন...";
+
+            let uploadedPaths = [];
+
+            try {
+                for (let i = 0; i < fileInput.files.length; i++) {
+                    const file = fileInput.files[i];
+                    const fileExt = file.name.split('.').pop();
+                    const fileName = `${Date.now()}_${Math.random().toString(36).substring(7)}.${fileExt}`;
+
+                    const { data, error } = await supabaseClient.storage
+                        .from('documents')
+                        .upload(fileName, file, {
+                            cacheControl: '3600',
+                            upsert: true
+                        });
+
+                    if (error) throw error;
+                    uploadedPaths.push(data.path);
+                }
+
+                const { error: dbError } = await supabaseClient
+                    .from('documents')
+                    .insert([
+                        { 
+                            file_name: title, 
+                            file_path: JSON.stringify(uploadedPaths), 
+                            passcode: vPass,
+                            download_passcode: dPass
+                        }
+                    ]);
+
+                if (dbError) throw dbError;
+
+                status.style.color = "green";
+                status.innerText = "🎉 ফাইল সফলভাবে আপলোড হয়েছে!";
+                document.getElementById('docTitle').value = '';
+                fileInput.value = '';
+                generateRandomPass();
+                loadUploadedFiles();
+
+            } catch (err) {
+                status.style.color = "red";
+                status.innerText = "❌ এরর: " + err.message;
+            }
+        }
 
         async function loadUploadedFiles() {
             const tableBody = document.getElementById('filesTableBody');
@@ -299,7 +330,6 @@ async function uploadFiles() {
                     if (Array.isArray(parsed)) fileCount = parsed.length;
                 } catch(e) {}
 
-                // ইউজার পেজের ডাইনামিক লিংক জেনারেট
                 const userViewLink = `${window.location.origin}${window.location.pathname.replace('admin.html', 'index.html')}?file=${encodeURIComponent(doc.file_path)}`;
 
                 const tr = document.createElement('tr');
@@ -319,7 +349,6 @@ async function uploadFiles() {
             });
         }
 
-        // 👁️ ১ চাপে পাসওয়ার্ড ছাড়াই অ্যাডমিন ফাইল দেখার ব্যবস্থা
         function previewAdminFile(encodedPath) {
             let fileList = [];
             try {
@@ -337,7 +366,6 @@ async function uploadFiles() {
             });
         }
 
-        // 📱 QR Code পপআপ দেখান
         function showQRCode(link, fileName) {
             document.getElementById('qrModalTitle').innerText = fileName;
             const canvas = document.getElementById('qrcodeCanvas');
@@ -356,7 +384,6 @@ async function uploadFiles() {
             document.getElementById('qrModal').style.display = 'none';
         }
 
-        // 🔗 লিংক শেয়ার করা
         async function shareLink(link, fileName) {
             if (navigator.share) {
                 try {
@@ -449,6 +476,7 @@ async function uploadFiles() {
             loadUploadedFiles();
             loadBlockedIPs();
             subscribeToAuditLogs();
+            trackRealtimeUsers(); // লাইভ ইউজার ট্র্যাকিং অন
         });
     </script>
 </body>
