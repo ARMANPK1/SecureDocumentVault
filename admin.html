@@ -210,63 +210,67 @@
                 .subscribe();
         }
 
-        async function uploadFiles() {
-            const title = document.getElementById('docTitle').value.trim();
-            const vPass = document.getElementById('viewPass').value.trim();
-            const dPass = document.getElementById('downloadPass').value.trim();
-            const fileInput = document.getElementById('fileInput');
-            const status = document.getElementById('status');
+async function uploadFiles() {
+    const title = document.getElementById('docTitle').value.trim();
+    const vPass = document.getElementById('viewPass').value.trim();
+    const dPass = document.getElementById('downloadPass').value.trim();
+    const fileInput = document.getElementById('fileInput');
+    const status = document.getElementById('status');
 
-            if (!title || !vPass || !dPass || fileInput.files.length === 0) {
-                alert("অনুগ্রহ করে শিরোনাম, পাসওয়ার্ড এবং অন্তত একটি ফাইল সিলেক্ট করুন!");
-                return;
-            }
+    if (!title || !vPass || !dPass || fileInput.files.length === 0) {
+        alert("অনুগ্রহ করে শিরোনাম, পাসওয়ার্ড এবং অন্তত একটি ফাইল সিলেক্ট করুন!");
+        return;
+    }
 
-            status.style.color = "blue";
-            status.innerText = "আপলোড হচ্ছে, অনুগ্রহ করে অপেক্ষা করুন...";
+    status.style.color = "blue";
+    status.innerText = "আপলোড হচ্ছে, অনুগ্রহ করে অপেক্ষা করুন...";
 
-            let uploadedPaths = [];
+    let uploadedPaths = [];
 
-            for (let i = 0; i < fileInput.files.length; i++) {
-                const file = fileInput.files[i];
-                const fileExt = file.name.split('.').pop();
-                const fileName = `${Date.now()}_${Math.random().toString(36).substring(7)}.${fileExt}`;
+    for (let i = 0; i < fileInput.files.length; i++) {
+        const file = fileInput.files[i];
+        const fileExt = file.name.split('.').pop();
+        const fileName = `${Date.now()}_${Math.random().toString(36).substring(7)}.${fileExt}`;
 
-                const { data, error } = await supabaseClient.storage
-                    .from('documents')
-                    .upload(fileName, file);
+        // আপলোড প্যারামিটারে cacheControl ও upsert যোগ করা হয়েছে
+        const { data, error } = await supabaseClient.storage
+            .from('documents')
+            .upload(fileName, file, {
+                cacheControl: '3600',
+                upsert: false
+            });
 
-                if (error) {
-                    status.style.color = "red";
-                    status.innerText = "❌ স্টোরেজ এরর: " + error.message;
-                    return;
-                }
-                uploadedPaths.push(data.path);
-            }
-
-            const { data, error } = await supabaseClient
-                .from('documents')
-                .insert([
-                    { 
-                        file_name: title, 
-                        file_path: JSON.stringify(uploadedPaths), 
-                        passcode: vPass,
-                        download_passcode: dPass
-                    }
-                ]);
-
-            if (error) {
-                status.style.color = "red";
-                status.innerText = "❌ ডাটাবেজ এরর: " + error.message;
-            } else {
-                status.style.color = "green";
-                status.innerText = "🎉 ফাইল সফলভাবে আপলোড হয়েছে!";
-                document.getElementById('docTitle').value = '';
-                fileInput.value = '';
-                generateRandomPass();
-                loadUploadedFiles();
-            }
+        if (error) {
+            status.style.color = "red";
+            status.innerText = "❌ স্টোরেজ এরর: " + error.message;
+            return;
         }
+        uploadedPaths.push(data.path);
+    }
+
+    const { data, error } = await supabaseClient
+        .from('documents')
+        .insert([
+            { 
+                file_name: title, 
+                file_path: JSON.stringify(uploadedPaths), 
+                passcode: vPass,
+                download_passcode: dPass
+            }
+        ]);
+
+    if (error) {
+        status.style.color = "red";
+        status.innerText = "❌ ডাটাবেজ এরর: " + error.message;
+    } else {
+        status.style.color = "green";
+        status.innerText = "🎉 ফাইল সফলভাবে আপলোড হয়েছে!";
+        document.getElementById('docTitle').value = '';
+        fileInput.value = '';
+        generateRandomPass();
+        loadUploadedFiles();
+    }
+}
 
         async function loadUploadedFiles() {
             const tableBody = document.getElementById('filesTableBody');
