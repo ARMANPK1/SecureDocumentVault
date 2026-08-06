@@ -244,6 +244,8 @@
         }
 
         async function uploadFiles() {
+            if (!supabaseClient) initSupabase();
+
             const title = document.getElementById('docTitle').value.trim();
             const vPass = document.getElementById('viewPass').value.trim();
             const dPass = document.getElementById('downloadPass').value.trim();
@@ -304,6 +306,8 @@
         }
 
         async function loadUploadedFiles() {
+            if (!supabaseClient) initSupabase();
+
             const tableBody = document.getElementById('filesTableBody');
             tableBody.innerHTML = '<tr><td colspan="5">লোড হচ্ছে...</td></tr>';
 
@@ -350,6 +354,8 @@
         }
 
         function previewAdminFile(encodedPath) {
+            if (!supabaseClient) initSupabase();
+
             let fileList = [];
             try {
                 fileList = JSON.parse(decodeURIComponent(encodedPath));
@@ -401,6 +407,7 @@
 
         async function deleteDocument(id) {
             if (!confirm("আপনি কি নিশ্চিত যে এই ফাইলটি ডিলিট করতে চান?")) return;
+            if (!supabaseClient) initSupabase();
 
             const { error } = await supabaseClient
                 .from('documents')
@@ -416,6 +423,8 @@
         }
 
         async function loadBlockedIPs() {
+            if (!supabaseClient) initSupabase();
+
             const tableBody = document.getElementById('blockedIpTableBody');
             tableBody.innerHTML = '<tr><td colspan="3">লোড হচ্ছে...</td></tr>';
 
@@ -456,6 +465,7 @@
 
         async function unblockIP(ip) {
             if (!confirm(`আপনি কি ${ip} আইপিটি আনব্লক করতে চান?`)) return;
+            if (!supabaseClient) initSupabase();
 
             const { error } = await supabaseClient
                 .from('blocked_ips')
@@ -476,18 +486,8 @@
             loadUploadedFiles();
             loadBlockedIPs();
             subscribeToAuditLogs();
-            trackRealtimeUsers(); // লাইভ ইউজার ট্র্যাকিং অন
-        
-
-    <!-- ১. সবার আগে Supabase CDN থাকতে হবে -->
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-
-<!-- ২. এরপর config.js থাকবে (যাতে URL ও KEY লোড হয়) -->
-<script src="config.js"></script>
-
-<!-- ৩. সবার শেষে admin.js থাকবে -->
-<script src="admin.js"></script>
-</script>
-});
+            trackRealtimeUsers();
+        });
+    </script>
 </body>
 </html>
