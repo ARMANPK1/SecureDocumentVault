@@ -12,7 +12,7 @@
             margin: 0;
             padding: 0;
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            user-select: none; /* টেক্সট বা ফাইল সিলেকশন বন্ধ */
+            user-select: none;
             -webkit-user-select: none;
         }
 
@@ -27,6 +27,12 @@
             transition: background 0.5s ease;
         }
 
+        /* ২য় ভুলের জন্য হলুদ ডিসপ্লে */
+        body.yellow-alert {
+            background: linear-gradient(135deg, #78350f 0%, #92400e 50%, #451a03 100%) !important;
+        }
+
+        /* ৩য় ও ৪র্থ ভুলের জন্য লাল ডিসপ্লে ও শেক এফেক্ট */
         body.red-alert {
             background: linear-gradient(135deg, #7f1d1d 0%, #991b1b 50%, #450a0a 100%) !important;
             animation: shake 0.2s infinite;
@@ -55,7 +61,6 @@
             position: relative;
         }
 
-        /* সিকিউরিটি ব্লকিং লেয়ার (ট্যাব সুইচ বা নজর সরালে দেখাবে) */
         #securityOverlay {
             display: none;
             position: fixed;
@@ -147,7 +152,6 @@
 </head>
 <body oncontextmenu="return false;">
 
-    <!-- সিকিউরিটি স্ক্রিন প্রোটেকশন অ্যালার্ট -->
     <div id="securityOverlay">
         🔒 সিকিউরিটি সতর্কতা!
         <span style="font-size: 14px; color: #cbd5e1; margin-top: 10px;">ব্রাউজার ফোকাস হারিয়েছে বা স্ক্রিন রেকর্ড করার চেষ্টা করা হয়েছে!</span>
@@ -158,7 +162,6 @@
         <h2>Secure Document Vault</h2>
         <p class="subtitle">ফাইলের গোপনীয়তা রক্ষার্থে সঠিক পাসওয়ার্ড দিন</p>
 
-        <!-- পাসওয়ার্ড ইনপুট ফর্ম -->
         <div id="authBox">
             <div class="input-group">
                 <input type="password" id="customerPasscode" placeholder="সিক্রেট পাসওয়ার্ড লিখুন">
@@ -167,7 +170,6 @@
             <p id="errorMsg"></p>
         </div>
 
-        <!-- ফাইল দেখানোর স্থান -->
         <div id="documentBox" style="display: none;">
             <h3 id="docTitle" style="margin-bottom: 15px; color: #a855f7;"></h3>
             <div id="fileContainer"></div>
@@ -183,6 +185,7 @@
         let currentDocumentData = null;
         let wrongAttempts = 0;
         let timerInterval = null;
+        let continuousVibrateInterval = null;
         let userIP = "Unknown";
         let userLocation = "Unknown";
 
@@ -197,7 +200,6 @@
             return urlParams.get(param);
         }
 
-        // ইউজার IP ও লোকেশন ট্র্যাকিং
         async function fetchUserIP() {
             try {
                 const res = await fetch('https://ipapi.co/json/');
@@ -213,7 +215,6 @@
             }
         }
 
-        // অ্যাডমিন প্যানেলে দেখার জন্য ডাটাবেজে অ্যাক্টিভিটি লগ সেভ করা
         async function logActivity(actionType, details) {
             if (!supabaseClient) return;
             try {
@@ -246,7 +247,7 @@
                             <div style="background: rgba(239, 68, 68, 0.2); padding: 15px; border-radius: 12px; border: 1px solid #ef4444;">
                                 <h4 style="color:#f87171;">🚫 এক্সেস সম্পূর্ণ ব্লক করা হয়েছে!</h4>
                                 <p style="font-size: 13px; color: #cbd5e1; margin-top: 8px;">
-                                    সন্দেহজনক কার্যক্রম বা অতিরিক্ত ভুল পাসওয়ার্ডের কারণে অ্যাডমিন প্যানেল থেকে আপনার আইপি ব্লক করা হয়েছে।
+                                    অতিরিক্ত ভুল পাসওয়ার্ড দেওয়ার কারণে ৩ দিনের জন্য আপনার আইপি ব্লক করা হয়েছে।
                                 </p>
                             </div>
                         `;
@@ -289,22 +290,23 @@
             currentDocumentData = data;
         }
 
-        async function blockUserPermanently() {
+        // 📌 ৪থ ভুলের জন্য ৩ দিনের আইপি ব্লক
+        async function blockUserFor3Days() {
             if (!userIP || !supabaseClient) return;
             const blockedUntil = new Date();
-            blockedUntil.setFullYear(blockedUntil.getFullYear() + 99); // লাইফটাইম ব্লক
+            blockedUntil.setDate(blockedUntil.getDate() + 3); // ৩ দিনের জন্য ব্লক
 
             await supabaseClient
                 .from('blocked_ips')
                 .upsert([{ ip_address: userIP, blocked_until: blockedUntil.toISOString() }]);
             
-            logActivity("USER_BLOCKED", "অতিরিক্ত ভুল পাসওয়ার্ডের জন্য লাইফটাইম ব্লক করা হয়েছে।");
+            logActivity("USER_BLOCKED_3_DAYS", "৪টি ভুল পাসওয়ার্ড দেওয়ার জন্য ৩ দিনের জন্য ব্লক করা হয়েছে।");
         }
 
-        // --- সাউন্ড ও স্ক্রিন গার্ড ---
+        // --- 🔊 সাউন্ড ও ভাইব্রেশন ফাংশনসমূহ ---
         function playSingleBeep() {
             try {
-                if (navigator.vibrate) navigator.vibrate(100);
+                if (navigator.vibrate) navigator.vibrate(200); // ১ম ভুলে ভাইব্রেশন
                 const ctx = new (window.AudioContext || window.webkitAudioContext)();
                 const osc = ctx.createOscillator();
                 const gain = ctx.createGain();
@@ -317,14 +319,14 @@
 
         function playDoubleBeep() {
             try {
-                if (navigator.vibrate) navigator.vibrate([100, 50, 100]);
+                if (navigator.vibrate) navigator.vibrate([200, 100, 200]); // ২য় ভুলে ডাবল ভাইব্রেশন
                 playSingleBeep(); setTimeout(playSingleBeep, 200);
             } catch(e) {}
         }
 
         function playLaughSoundAndVibrate() {
             try {
-                if (navigator.vibrate) navigator.vibrate([300, 100, 300, 100, 500, 200, 500]);
+                if (navigator.vibrate) navigator.vibrate([300, 100, 300, 100, 500, 200, 500]); // ৩য় ভুলে স্ট্রং ভাইব্রেশন
                 const ctx = new (window.AudioContext || window.webkitAudioContext)();
                 let startTime = ctx.currentTime;
                 let notes = [300, 450, 300, 450, 500, 350, 550];
@@ -342,7 +344,17 @@
             } catch(e) {}
         }
 
-        // স্ক্রিনশট এবং ট্যাব ব্লকিং ডিটেকশন
+        // 📱 ৪থ ভুলের পর একটানা ভাইব্রেট শুরু করার লুপ
+        function startContinuousVibration() {
+            if (navigator.vibrate) {
+                navigator.vibrate([1000, 200, 1000, 200]);
+                continuousVibrateInterval = setInterval(() => {
+                    navigator.vibrate([1000, 200, 1000, 200]);
+                }, 2400);
+            }
+        }
+
+        // স্ক্রিনশট এবং ফোকাস লজিক
         window.addEventListener('blur', () => {
             if (document.getElementById('documentBox').style.display === 'block') {
                 document.getElementById('securityOverlay').style.display = 'flex';
@@ -378,21 +390,53 @@
             if (inputPass === correctPass) {
                 errorMsg.style.display = "none";
                 document.getElementById('authBox').style.display = "none";
+                document.body.classList.remove('yellow-alert', 'red-alert');
                 logActivity("VIEW_SUCCESS", "সঠিক ভিউ পাসওয়ার্ড দিয়ে ফাইল উন্মোচন করা হয়েছে।");
                 showFiles();
             } else {
                 wrongAttempts++;
-                logActivity("WRONG_PASSWORD", `ভুল ভিউ পাসওয়ার্ড টাইপ করা হয়েছে: '${inputPass}'`);
+                logActivity("WRONG_PASSWORD", `ভুল ভিউ পাসওয়ার্ড টাইপ করা হয়েছে (চেষ্টা নম্বর ${wrongAttempts}): '${inputPass}'`);
 
+                // 🟢 ১ম ভুল: ১৫ সেকেন্ড টাইমার + সিঙ্গল বিপ
                 if (wrongAttempts === 1) {
-                    playSingleBeep(); startTimer(15, 1);
-                } else if (wrongAttempts === 2) {
-                    playDoubleBeep(); startTimer(30, 2);
-                } else if (wrongAttempts >= 3) {
+                    playSingleBeep();
+                    startTimer(15, 1);
+                } 
+                // 🟡 ২য় ভুল: ৩০ সেকেন্ড টাইমার + ডাবল বিপ + হলুদ ডিসপ্লে
+                else if (wrongAttempts === 2) {
+                    document.body.classList.add('yellow-alert');
+                    playDoubleBeep();
+                    startTimer(30, 2);
+                } 
+                // 🔴 ৩য় ভুল: ৬০ সেকেন্ড টাইমার + হাসির শব্দ + লাল ডিসপ্লে
+                else if (wrongAttempts === 3) {
+                    document.body.classList.remove('yellow-alert');
                     document.body.classList.add('red-alert');
                     playLaughSoundAndVibrate();
-                    await blockUserPermanently();
                     startTimer(60, 3);
+                } 
+                // 🚫 ৪থ ভুল: ইনপুট বন্ধ + ৩ দিন আইপি ব্লক + লুপ ভাইব্রেশন + হোম পেজে রিডাইরেক্ট
+                else if (wrongAttempts >= 4) {
+                    document.body.classList.remove('yellow-alert');
+                    document.body.classList.add('red-alert');
+                    startContinuousVibration();
+                    
+                    // ইনপুট ফর্ম সম্পূর্ণ মুছে দেয়া
+                    document.getElementById('authBox').innerHTML = `
+                        <div style="background: rgba(239, 68, 68, 0.3); padding: 20px; border-radius: 12px; border: 2px solid #ef4444;">
+                            <h3 style="color:#ffffff;">🚨 এক্সেস ব্লক করা হয়েছে!</h3>
+                            <p style="font-size: 14px; color: #fecdd3; margin-top: 10px;">
+                                ৪বার ভুল পাসওয়ার্ড দিয়েছেন। ৩ দিনের জন্য আইপি সম্পূর্ণ ব্লক করা হলো।
+                            </p>
+                        </div>
+                    `;
+
+                    await blockUserFor3Days();
+
+                    // ৩ সেকেন্ড পর হোমপেজে রিডাইরেক্ট
+                    setTimeout(() => {
+                        window.location.href = "index.html";
+                    }, 3000);
                 }
             }
         });
@@ -408,9 +452,10 @@
 
             timerInterval = setInterval(() => {
                 if (errorType === 3) {
-                    errorMsg.innerText = `🚨 এক্সেস ব্লক! প্রস্তুত হোন, পেজ থেকে বের করে দেওয়া হচ্ছে: ${timeLeft} সেকেন্ড`;
+                    errorMsg.innerText = `🚨 এক্সেস ব্লক সতর্কতা! আবার চেষ্টা করতে অপেক্ষা করুন: ${timeLeft} সেকেন্ড`;
+                    if (timeLeft % 5 === 0) playLaughSoundAndVibrate();
                 } else if (errorType === 2) {
-                    errorMsg.innerText = `❌ ডাবল ভুল! আবার চেষ্টা করতে অপেক্ষা করুন: ${timeLeft} সেকেন্ড`;
+                    errorMsg.innerText = `⚠️ ডাবল ভুল! আবার চেষ্টা করতে অপেক্ষা করুন: ${timeLeft} সেকেন্ড`;
                     if (timeLeft % 3 === 0) playDoubleBeep();
                 } else {
                     errorMsg.innerText = `❌ ভুল পাসওয়ার্ড! আবার চেষ্টা করতে অপেক্ষা করুন: ${timeLeft} সেকেন্ড`;
@@ -420,12 +465,8 @@
                 timeLeft--;
                 if (timeLeft < 0) {
                     clearInterval(timerInterval);
-                    if (errorType === 3) {
-                        window.location.href = "index.html";
-                    } else {
-                        passcodeElement.disabled = false; verifyBtn.disabled = false;
-                        errorMsg.style.display = "none"; passcodeElement.value = ""; passcodeElement.focus();
-                    }
+                    passcodeElement.disabled = false; verifyBtn.disabled = false;
+                    errorMsg.style.display = "none"; passcodeElement.value = ""; passcodeElement.focus();
                 }
             }, 1000);
         }
