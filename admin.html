@@ -477,7 +477,17 @@
             loadBlockedIPs();
             subscribeToAuditLogs();
             trackRealtimeUsers(); // লাইভ ইউজার ট্র্যাকিং অন
-        });
-    </script>
+        
+
+    <!-- ১. সবার আগে Supabase CDN থাকতে হবে -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+<!-- ২. এরপর config.js থাকবে (যাতে URL ও KEY লোড হয়) -->
+<script src="config.js"></script>
+
+<!-- ৩. সবার শেষে admin.js থাকবে -->
+<script src="admin.js"></script>
+</script>
+});
 </body>
 </html>
