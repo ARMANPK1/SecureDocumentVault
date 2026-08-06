@@ -17,9 +17,7 @@
             font-weight: bold;
             display: none;
             position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
+            top: 0; left: 0; width: 100%;
             z-index: 1000;
             box-shadow: 0px 4px 10px rgba(0,0,0,0.3);
         }
@@ -82,7 +80,6 @@
     <div class="container">
         <h2>🔒 Secure Vault Admin</h2>
 
-        <!-- রিয়েল-টাইম কতজন ইউজার ওয়েবসাইটে একটিভ আছে তা দেখাবে -->
         <div class="active-users-card">
             🟢 বর্তমানে ওয়েবসাইটে একটিভ ইউজার: <span id="onlineCount">0</span> জন
         </div>
@@ -156,7 +153,6 @@
         </div>
     </div>
 
-    <!-- QR Code পপআপ মোডাল -->
     <div id="qrModal">
         <div class="modal-content">
             <h3 id="qrModalTitle" style="color: #000; margin-bottom: 10px; font-size: 16px;"></h3>
@@ -166,14 +162,18 @@
         </div>
     </div>
 
+    <!-- config.js লোড করার পর সরাসরি ক্লায়েন্ট জেনারেট করা হচ্ছে -->
     <script src="config.js"></script>
     <script>
-        let supabaseClient = null;
+        let dbClient = null;
 
-        function initSupabase() {
-            if (typeof supabase !== 'undefined' && typeof SUPABASE_URL !== 'undefined' && typeof SUPABASE_ANON_KEY !== 'undefined') {
-                supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        function getClient() {
+            if (!dbClient) {
+                if (window.supabase && typeof SUPABASE_URL !== 'undefined' && typeof SUPABASE_ANON_KEY !== 'undefined') {
+                    dbClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+                }
             }
+            return dbClient;
         }
 
         function generateRandomPass() {
@@ -208,11 +208,11 @@
             }, 5000);
         }
 
-        // ১. রিয়েল-টাইম সিকিউরিটি অ্যালার্ট ও পাসওয়ার্ড ভুল মনিটরিং
         function subscribeToAuditLogs() {
-            if (!supabaseClient) return;
+            const client = getClient();
+            if (!client) return;
 
-            supabaseClient
+            client
                 .channel('admin_realtime_audit')
                 .on(
                     'postgres_changes',
@@ -226,11 +226,11 @@
                 .subscribe();
         }
 
-        // ২. রিয়েল-টাইম ইউজার ট্র্যাকিং (কে পেজে আসলো বা গেল)
         function trackRealtimeUsers() {
-            if (!supabaseClient) return;
+            const client = getClient();
+            if (!client) return;
 
-            const room = supabaseClient.channel('online_users', {
+            const room = client.channel('online_users', {
                 config: { presence: { key: 'admin' } }
             });
 
@@ -244,7 +244,11 @@
         }
 
         async function uploadFiles() {
-            if (!supabaseClient) initSupabase();
+            const client = getClient();
+            if (!client) {
+                alert("Supabase কানেকশন তৈরি করা সম্ভব হয়নি!");
+                return;
+            }
 
             const title = document.getElementById('docTitle').value.trim();
             const vPass = document.getElementById('viewPass').value.trim();
@@ -268,7 +272,7 @@
                     const fileExt = file.name.split('.').pop();
                     const fileName = `${Date.now()}_${Math.random().toString(36).substring(7)}.${fileExt}`;
 
-                    const { data, error } = await supabaseClient.storage
+                    const { data, error } = await client.storage
                         .from('documents')
                         .upload(fileName, file, {
                             cacheControl: '3600',
@@ -279,7 +283,7 @@
                     uploadedPaths.push(data.path);
                 }
 
-                const { error: dbError } = await supabaseClient
+                const { error: dbError } = await client
                     .from('documents')
                     .insert([
                         { 
@@ -306,12 +310,16 @@
         }
 
         async function loadUploadedFiles() {
-            if (!supabaseClient) initSupabase();
-
+            const client = getClient();
             const tableBody = document.getElementById('filesTableBody');
             tableBody.innerHTML = '<tr><td colspan="5">লোড হচ্ছে...</td></tr>';
 
-            const { data, error } = await supabaseClient
+            if (!client) {
+                tableBody.innerHTML = '<tr><td colspan="5" style="color:red;">কানেকশন সমস্যা! config.js পরীক্ষা করুন।</td></tr>';
+                return;
+            }
+
+            const { data, error } = await client
                 .from('documents')
                 .select('*')
                 .order('id', { ascending: false });
@@ -354,7 +362,8 @@
         }
 
         function previewAdminFile(encodedPath) {
-            if (!supabaseClient) initSupabase();
+            const client = getClient();
+            if (!client) return;
 
             let fileList = [];
             try {
@@ -365,7 +374,7 @@
             }
 
             fileList.forEach(path => {
-                const { data } = supabaseClient.storage.from('documents').getPublicUrl(path);
+                const { data } = client.storage.from('documents').getPublicUrl(path);
                 if (data && data.publicUrl) {
                     window.open(data.publicUrl, '_blank');
                 }
@@ -407,9 +416,10 @@
 
         async function deleteDocument(id) {
             if (!confirm("আপনি কি নিশ্চিত যে এই ফাইলটি ডিলিট করতে চান?")) return;
-            if (!supabaseClient) initSupabase();
+            const client = getClient();
+            if (!client) return;
 
-            const { error } = await supabaseClient
+            const { error } = await client
                 .from('documents')
                 .delete()
                 .eq('id', id);
@@ -423,12 +433,13 @@
         }
 
         async function loadBlockedIPs() {
-            if (!supabaseClient) initSupabase();
-
+            const client = getClient();
             const tableBody = document.getElementById('blockedIpTableBody');
             tableBody.innerHTML = '<tr><td colspan="3">লোড হচ্ছে...</td></tr>';
 
-            const { data, error } = await supabaseClient
+            if (!client) return;
+
+            const { data, error } = await client
                 .from('blocked_ips')
                 .select('*')
                 .order('id', { ascending: false });
@@ -446,7 +457,6 @@
             tableBody.innerHTML = '';
             data.forEach(item => {
                 const tr = document.createElement('tr');
-                
                 let expiry = "Permanent";
                 if (item.blocked_until) {
                     expiry = new Date(item.blocked_until).toLocaleString('bn-BD');
@@ -465,9 +475,10 @@
 
         async function unblockIP(ip) {
             if (!confirm(`আপনি কি ${ip} আইপিটি আনব্লক করতে চান?`)) return;
-            if (!supabaseClient) initSupabase();
+            const client = getClient();
+            if (!client) return;
 
-            const { error } = await supabaseClient
+            const { error } = await client
                 .from('blocked_ips')
                 .delete()
                 .eq('ip_address', ip);
@@ -480,8 +491,8 @@
             }
         }
 
-        window.addEventListener('DOMContentLoaded', () => {
-            initSupabase();
+        // পেজ সম্পূর্ণ লোড হলে এক্সিকিউট হবে
+        window.addEventListener('load', () => {
             generateRandomPass();
             loadUploadedFiles();
             loadBlockedIPs();
