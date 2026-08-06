@@ -5,106 +5,153 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Secure Vault Admin</title>
     <link rel="stylesheet" href="style.css">
-    <!-- Supabase Library -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <!-- Canvas Based QR Code Library for Overlay Logo Support -->
+    <!-- QR Code Generator Library -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <style>
-        #qrResult { margin-top: 20px; padding: 15px; border-top: 2px dashed #ccc; text-align: center; }
-        #qrCanvas { display: block; margin: 15px auto; border-radius: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.15); }
+        .notification-banner {
+            background-color: #ff4d4d;
+            color: white;
+            padding: 15px;
+            text-align: center;
+            font-size: 18px;
+            font-weight: bold;
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            z-index: 1000;
+            box-shadow: 0px 4px 10px rgba(0,0,0,0.3);
+        }
 
-        /* Admin List Section Styling */
-        .admin-section { margin-top: 40px; border-top: 2px solid #ddd; padding-top: 20px; }
-        .refresh-btn { float: right; background-color: #0066cc; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; }
-        .refresh-btn:hover { background-color: #0052a3; }
-        .table-responsive { width: 100%; overflow-x: auto; margin-top: 15px; }
-        .vault-table { width: 100%; border-collapse: collapse; text-align: left; margin-top: 10px; }
-        .vault-table th, .vault-table td { border: 1px solid #ddd; padding: 10px; font-size: 14px; }
-        .vault-table th { background-color: #f4f4f4; }
-        .action-btn { padding: 5px 8px; font-size: 12px; border: none; border-radius: 3px; cursor: pointer; text-decoration: none; display: inline-block; margin: 2px; }
-        .btn-view { background-color: #28a745; color: white; }
-        .btn-qr { background-color: #17a2b8; color: white; }
-        .btn-edit { background-color: #ffc107; color: black; }
-        .btn-delete { background-color: #dc3545; color: white; }
-        .pass-badge { background-color: #e9ecef; padding: 2px 5px; border-radius: 3px; font-family: monospace; font-weight: bold; }
+        /* Modal / Popup for QR Code */
+        #qrModal {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0, 0, 0, 0.85);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 99999;
+        }
+
+        .modal-content {
+            background: #fff;
+            color: #000;
+            padding: 25px;
+            border-radius: 16px;
+            text-align: center;
+            max-width: 320px;
+            width: 90%;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+        }
+
+        .btn-action {
+            border: none;
+            padding: 6px 10px;
+            border-radius: 6px;
+            color: #fff;
+            cursor: pointer;
+            font-size: 12px;
+            margin: 2px;
+        }
+
+        .btn-view { background: #3b82f6; }
+        .btn-qr { background: #8b5cf6; }
+        .btn-share { background: #10b981; }
+        .btn-delete { background: #ef4444; }
     </style>
 </head>
 <body>
+
+    <div id="alertBanner" class="notification-banner">
+        🚨 সিকিউরিটি অ্যালার্ট: কেউ একজন ভুল পাসওয়ার্ড দিয়েছে!
+    </div>
+
     <div class="container">
         <h2>🔒 Secure Vault Admin</h2>
-        <a href="index.html">User View</a>
-        <h3>ফাইল আপলোড প্যানেল</h3>
         
-        <form id="uploadForm" onsubmit="return false;">
-            <input type="text" id="fileNameInput" placeholder="ডকুমেন্টের শিরোনাম/নাম" required><br><br>
-            
-            <div style="background: #f8f9fa; padding: 10px; border-radius: 5px; margin-bottom: 10px; text-align: left;">
-                <label style="font-size: 13px; font-weight: bold;">অটোমেটিক জেনারেট হওয়া নাম্বার পাসওয়ার্ড:</label><br>
-                <div style="display: flex; gap: 10px; margin-top: 5px;">
-                    <input type="text" id="passcodeInput" placeholder="ভিউ পাসওয়ার্ড" readonly style="width: 50%;">
-                    <input type="text" id="downloadPasscodeInput" placeholder="ডাউনলোড পাসওয়ার্ড" readonly style="width: 50%;">
-                </div>
-                <button type="button" onclick="generateAutoPasswords()" style="margin-top: 5px; background: #6c757d; color: white; border: none; padding: 4px 8px; border-radius: 3px; cursor: pointer;">🎲 নতুন পাসওয়ার্ড জেনারেট করুন</button>
-            </div>
-
-            <!-- মাল্টি ফাইল সিলেকশন সাপোর্ট -->
-            <input type="file" id="fileInput" multiple required><br>
-            <small style="color: #666;">(একসাথে একাধিক ফাইল সিলেক্ট করতে পারেন)</small><br><br>
-            <button type="button" id="uploadBtn">আপলোড করুন</button>
-        </form>
-
-        <!-- QR Code এবং Link দেখানোর বক্স -->
-        <div id="qrResult" style="display: none;">
-            <h4>🎉 ফাইল তৈরি সফল হয়েছে!</h4>
-            <p style="font-size: 12px; color: #555;">ডাউনলোড লিংক:</p>
-            <p id="fileLinkDisplay" style="word-break: break-all; color: #0066cc; font-weight: bold;"></p>
-            <p style="margin-top: 10px;">QR Code:</p>
-            
-            <!-- কাস্টম লোগোসহ QR কোড ড্র করার ক্যানভাস -->
-            <canvas id="qrCanvas"></canvas>
-            <!-- হিডেন QR হোল্ডার -->
-            <div id="qrcodeTemp" style="display:none;"></div>
+        <div style="text-align: center; margin-bottom: 15px;">
+            <a href="index.html" style="color: #6a11cb; font-weight: bold; text-decoration: none;">User View</a>
         </div>
 
-        <!-- 📂 আপলোডকৃত ফাইল দেখার লিস্ট -->
-        <div class="admin-section">
-            <button class="refresh-btn" onclick="fetchFiles()">🔄 রিফ্রেশ করুন</button>
-            <h3>📂 আপলোডকৃত ফাইলের তালিকা</h3>
-            
-            <div class="table-responsive">
-                <table class="vault-table">
-                    <thead>
-                        <tr>
-                            <th>শিরোনাম</th>
-                            <th>ফাইলের সংখ্যা</th>
-                            <th>ভিউ পাসওয়ার্ড</th>
-                            <th>ডাউনলোড পাসওয়ার্ড</th>
-                            <th>অ্যাকশন</th>
-                        </tr>
-                    </thead>
-                    <tbody id="fileListBody">
-                        <tr>
-                            <td colspan="5" style="text-align: center;">ডাটা লোড হচ্ছে...</td>
-                        </tr>
-                    </tbody>
-                </table>
+        <h3>ফাইল আপলোড প্যানেল</h3>
+
+        <input type="text" id="docTitle" placeholder="ডকুমেন্টের শিরোনাম/নাম">
+
+        <div style="margin: 10px 0;">
+            <label style="font-size: 13px; font-weight: bold;">অটোমেটিক জেনারেট হওয়া নাম্বার পাসওয়ার্ড:</label>
+            <div style="display: flex; gap: 10px; margin-top: 5px;">
+                <input type="text" id="viewPass" placeholder="ভিউ পাসওয়ার্ড" readonly style="flex: 1; text-align: center; font-weight: bold; background: #f0f0f0;">
+                <input type="text" id="downloadPass" placeholder="ডাউনলোড পাসওয়ার্ড" readonly style="flex: 1; text-align: center; font-weight: bold; background: #f0f0f0;">
             </div>
+            <button onclick="generateRandomPass()" style="margin-top: 5px; background: #555; color: white; padding: 6px; font-size: 12px; border-radius: 5px; cursor: pointer; width: 100%;">🎲 নতুন পাসওয়ার্ড জেনারেট করুন</button>
         </div>
 
-        <!-- 🚫 ব্লকড আইপি ম্যানেজমেন্ট সেকশন -->
-        <div class="admin-section" style="margin-top: 30px;">
-            <button class="refresh-btn" onclick="loadBlockedIPs()">🔄 রিফ্রেশ করুন</button>
-            <h3>🚫 ব্লকড আইপি তালিকা</h3>
-            <div id="blockedListContainer" style="margin-top: 15px;">
-                <p style="font-size: 13px; color: #666;">ব্লকড আইপি লোড হচ্ছে...</p>
-            </div>
+        <input type="file" id="fileInput" multiple style="margin-top: 10px;">
+        <small style="color: gray; display: block; margin-bottom: 10px;">(একসাথে একাধিক ফাইল সিলেক্ট করতে পারেন)</small>
+
+        <button onclick="uploadFiles()">আপলোড করুন</button>
+        
+        <p id="status" style="margin-top: 10px; font-weight: bold; text-align: center;"></p>
+
+        <hr style="margin: 20px 0;">
+
+        <button onclick="loadUploadedFiles()" style="background-color: #007bff; margin-bottom: 10px;">🔄 রিফ্রেশ করুন</button>
+
+        <h3>📂 আপলোডকৃত ফাইলের তালিকা</h3>
+        
+        <div style="overflow-x: auto;">
+            <table border="1" style="width: 100%; border-collapse: collapse; text-align: center; margin-top: 10px;">
+                <thead>
+                    <tr style="background-color: #f2f2f2;">
+                        <th>শিরোনাম</th>
+                        <th>ফাইলের সংখ্যা</th>
+                        <th>ভিউ পাসওয়ার্ড</th>
+                        <th>ডাউনলোড পাসওয়ার্ড</th>
+                        <th>একশন</th>
+                    </tr>
+                </thead>
+                <tbody id="filesTableBody">
+                    <tr><td colspan="5">লোড হচ্ছে...</td></tr>
+                </tbody>
+            </table>
+        </div>
+
+        <hr style="margin: 20px 0;">
+
+        <button onclick="loadBlockedIPs()" style="background-color: #007bff; margin-bottom: 10px;">🔄 রিফ্রেশ করুন</button>
+
+        <h3>🚫 ব্লকড আইপি তালিকা</h3>
+        
+        <div style="overflow-x: auto;">
+            <table border="1" style="width: 100%; border-collapse: collapse; text-align: center; margin-top: 10px;">
+                <thead>
+                    <tr style="background-color: #ffe6e6;">
+                        <th>আইপি ঠিকানা</th>
+                        <th>ব্লকের মেয়াদ</th>
+                        <th>একশন</th>
+                    </tr>
+                </thead>
+                <tbody id="blockedIpTableBody">
+                    <tr><td colspan="3">লোড হচ্ছে...</td></tr>
+                </tbody>
+            </table>
         </div>
     </div>
 
-    <!-- 1. Config First -->
-    <script src="config.js"></script>
+    <!-- QR Code পপআপ মোডাল -->
+    <div id="qrModal">
+        <div class="modal-content">
+            <h3 id="qrModalTitle" style="color: #000; margin-bottom: 10px; font-size: 16px;"></h3>
+            <div id="qrcodeCanvas" style="display:flex; justify-content:center; margin:15px 0;"></div>
+            <p style="font-size:12px; color:#666; margin-bottom:15px;">ক্যামেরা দিয়ে স্ক্যান করে সরাসরি ফাইল ভিউ পেজে যান</p>
+            <button onclick="closeQRModal()" style="background:#ef4444; color:#fff; border:none; padding:8px 20px; border-radius:8px; cursor:pointer;">বন্ধ করুন</button>
+        </div>
+    </div>
 
-    <!-- 2. Main Logic -->
+    <script src="config.js"></script>
     <script>
         let supabaseClient = null;
 
@@ -114,234 +161,215 @@
             }
         }
 
-        // অটোমেটিক ৬ ডিজিট সংখ্যাভিত্তিক পাসওয়ার্ড তৈরি
-        function generateAutoPasswords() {
-            const viewPass = Math.floor(100000 + Math.random() * 900000).toString();
-            const downloadPass = Math.floor(100000 + Math.random() * 900000).toString();
-            document.getElementById('passcodeInput').value = viewPass;
-            document.getElementById('downloadPasscodeInput').value = downloadPass;
+        function generateRandomPass() {
+            const vPass = Math.floor(100000 + Math.random() * 900000).toString();
+            const dPass = Math.floor(100000 + Math.random() * 900000).toString();
+            document.getElementById('viewPass').value = vPass;
+            document.getElementById('downloadPass').value = dPass;
         }
 
-        // ১. ফাইল আপলোড লজিক (মাল্টি-ফাইল সাপোর্টসহ)
-        document.getElementById('uploadBtn').addEventListener('click', async () => {
-            if (!supabaseClient) initSupabase();
-
-            if (!supabaseClient) {
-                alert('⚠️ Supabase বা Config (config.js) লোড হতে সমস্যা হয়েছে!');
-                return;
-            }
-            
-            const fileName = document.getElementById('fileNameInput').value.trim();
-            const passcode = document.getElementById('passcodeInput').value.trim();
-            const downloadPasscode = document.getElementById('downloadPasscodeInput').value.trim();
-            const fileInput = document.getElementById('fileInput');
-            const files = fileInput.files;
-
-            if (files.length === 0 || !fileName || !passcode || !downloadPasscode) {
-                alert('⚠️ অনুগ্রহ করে সবগুলো ঘর পূরণ করুন!');
-                return;
-            }
-
-            const uploadBtn = document.getElementById('uploadBtn');
-            uploadBtn.innerText = 'আপলোড হচ্ছে...';
-            uploadBtn.disabled = true;
-
+        function playBeepSound() {
             try {
-                let uploadedPaths = [];
+                const ctx = new (window.AudioContext || window.webkitAudioContext)();
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+                osc.type = 'sine';
+                osc.frequency.value = 800; 
+                gain.gain.value = 0.1; 
+                osc.connect(gain);
+                gain.connect(ctx.destination);
+                osc.start();
+                setTimeout(() => osc.stop(), 300);
+            } catch (e) {}
+        }
 
-                // লুপ চালিয়ে প্রতিটি ফাইল আপলোড করা
-                for (let i = 0; i < files.length; i++) {
-                    const file = files[i];
-                    const fileExt = file.name.split('.').pop();
-                    const uniqueFileName = `${Date.now()}_${i}_${fileName.replace(/\s+/g, '_')}.${fileExt}`;
-
-                    const { data: storageData, error: storageError } = await supabaseClient
-                        .storage
-                        .from('documents') 
-                        .upload(uniqueFileName, file);
-
-                    if (storageError) throw new Error('স্টোরেজ এরর: ' + storageError.message);
-                    uploadedPaths.push(uniqueFileName);
-                }
-
-                // ডাটাবেস ইনসার্ট (ফাইল পাথ JSON অ্যারে হিসেব সেভ)
-                const { data: dbData, error: dbError } = await supabaseClient
-                    .from('documents')
-                    .insert([
-                        { 
-                            file_name: fileName,
-                            file_path: JSON.stringify(uploadedPaths), 
-                            passcode: passcode,
-                            download_passcode: downloadPasscode
-                        }
-                    ]);
-
-                if (dbError) throw new Error('ডাটাবেস এরর: ' + dbError.message);
-
-                alert('🎉 সফলভাবে ফাইল আপলোড ও সেভ হয়েছে!');
-
-                generateQRCode(JSON.stringify(uploadedPaths));
-                document.getElementById('uploadForm').reset();
-                generateAutoPasswords();
-                fetchFiles();
-
-            } catch (err) {
-                alert('❌ ' + err.message);
-                console.error(err);
-            } finally {
-                uploadBtn.innerText = 'আপলোড করুন';
-                uploadBtn.disabled = false;
-            }
-        });
-
-        // ২. কাস্টম সিকিউরিটি লোগোসহ QR Code জেনারেট করা
-        function generateQRCode(filePath) {
-            const accessUrl = `https://armanpk1.github.io/SecureDocumentVault/index.html?file=${encodeURIComponent(filePath)}`;
-            document.getElementById('fileLinkDisplay').innerText = accessUrl;
-
-            const tempContainer = document.getElementById('qrcodeTemp');
-            tempContainer.innerHTML = "";
-
-            const mainCanvas = document.getElementById('qrCanvas');
-            const ctx = mainCanvas.getContext('2d');
-            const qrSize = 260;
-            mainCanvas.width = qrSize;
-            mainCanvas.height = qrSize;
-
-            const qrcodeObj = new QRCode(tempContainer, {
-                text: accessUrl,
-                width: qrSize,
-                height: qrSize,
-                correctLevel: QRCode.CorrectLevel.H
-            });
+        function triggerSecurityAlert() {
+            const banner = document.getElementById('alertBanner');
+            banner.style.display = 'block';
+            playBeepSound();
 
             setTimeout(() => {
-                const baseCanvas = tempContainer.querySelector('canvas');
-                if (!baseCanvas) return;
-
-                ctx.drawImage(baseCanvas, 0, 0);
-
-                const svgString = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><path fill="#000000" d="M256 0c-48.6 0-91.8 24.3-118 61.8L35 106.6C20.8 112 11.2 125.1 11.2 140.3c0 8.4 3 16.5 8.5 22.8l38.2 43.8c10.8 12.4 27.2 18.2 42.9 15.2l39.5-7.5c28 26.6 65.6 42.4 106.7 42.4s78.7-15.8 106.7-42.4l39.5 7.5c15.7 3 32.1-2.8 42.9-15.2l38.2-43.8c5.5-6.3 8.5-14.4 8.5-22.8 0-15.2-9.6-28.3-23.8-33.7l-103-44.8C347.8 24.3 304.6 0 256 0zm0 112c-44.2 0-80 35.8-80 80s35.8 80 80 80 80-35.8 80-80-35.8-80-80-80zm0 180c-88.4 0-160 53.7-160 120v40c0 11 9 20 20 20h280c11 0 20-9 20-20v-40c0-66.3-71.6-120-160-120z"/></svg>`;
-                
-                const blob = new Blob([svgString], {type: 'image/svg+xml;charset=utf-8'});
-                const url = URL.createObjectURL(blob);
-                const logoImg = new Image();
-
-                logoImg.onload = function() {
-                    const logoSize = 52;
-                    const x = (qrSize - logoSize) / 2;
-                    const y = (qrSize - logoSize) / 2;
-
-                    ctx.fillStyle = '#ffffff';
-                    ctx.beginPath();
-                    ctx.arc(qrSize / 2, qrSize / 2, (logoSize / 2) + 4, 0, Math.PI * 2);
-                    ctx.fill();
-
-                    ctx.drawImage(logoImg, x, y, logoSize, logoSize);
-                    URL.revokeObjectURL(url);
-                };
-
-                logoImg.src = url;
-                document.getElementById('qrResult').style.display = 'block';
-            }, 150);
+                banner.style.display = 'none';
+            }, 5000);
         }
 
-        // ৩. ডাটাবেজ থেকে ফাইল তালিকা লোড
-        async function fetchFiles() {
-            if (!supabaseClient) initSupabase();
-            const tableBody = document.getElementById('fileListBody');
+        function subscribeToAuditLogs() {
+            if (!supabaseClient) return;
 
-            if (!supabaseClient) {
-                tableBody.innerHTML = `<tr><td colspan="5" style="text-align: center; color: red;">Supabase কনফিগারেশন মিসিং!</td></tr>`;
+            supabaseClient
+                .channel('admin_realtime_audit')
+                .on(
+                    'postgres_changes',
+                    { event: 'INSERT', schema: 'public', table: 'audit_logs' },
+                    (payload) => {
+                        if (payload.new && payload.new.action === 'WRONG_PASSWORD') {
+                            triggerSecurityAlert();
+                        }
+                    }
+                )
+                .subscribe();
+        }
+
+        async function uploadFiles() {
+            const title = document.getElementById('docTitle').value.trim();
+            const vPass = document.getElementById('viewPass').value.trim();
+            const dPass = document.getElementById('downloadPass').value.trim();
+            const fileInput = document.getElementById('fileInput');
+            const status = document.getElementById('status');
+
+            if (!title || !vPass || !dPass || fileInput.files.length === 0) {
+                alert("অনুগ্রহ করে শিরোনাম, পাসওয়ার্ড এবং অন্তত একটি ফাইল সিলেক্ট করুন!");
                 return;
             }
 
-            tableBody.innerHTML = `<tr><td colspan="5" style="text-align: center;">ডাটা রিফ্রেশ হচ্ছে...</td></tr>`;
+            status.style.color = "blue";
+            status.innerText = "আপলোড হচ্ছে, অনুগ্রহ করে অপেক্ষা করুন...";
 
-            const { data: documents, error } = await supabaseClient
+            let uploadedPaths = [];
+
+            for (let i = 0; i < fileInput.files.length; i++) {
+                const file = fileInput.files[i];
+                const fileExt = file.name.split('.').pop();
+                const fileName = `${Date.now()}_${Math.random().toString(36).substring(7)}.${fileExt}`;
+
+                const { data, error } = await supabaseClient.storage
+                    .from('documents')
+                    .upload(fileName, file);
+
+                if (error) {
+                    status.style.color = "red";
+                    status.innerText = "❌ স্টোরেজ এরর: " + error.message;
+                    return;
+                }
+                uploadedPaths.push(data.path);
+            }
+
+            const { data, error } = await supabaseClient
+                .from('documents')
+                .insert([
+                    { 
+                        file_name: title, 
+                        file_path: JSON.stringify(uploadedPaths), 
+                        passcode: vPass,
+                        download_passcode: dPass
+                    }
+                ]);
+
+            if (error) {
+                status.style.color = "red";
+                status.innerText = "❌ ডাটাবেজ এরর: " + error.message;
+            } else {
+                status.style.color = "green";
+                status.innerText = "🎉 ফাইল সফলভাবে আপলোড হয়েছে!";
+                document.getElementById('docTitle').value = '';
+                fileInput.value = '';
+                generateRandomPass();
+                loadUploadedFiles();
+            }
+        }
+
+        async function loadUploadedFiles() {
+            const tableBody = document.getElementById('filesTableBody');
+            tableBody.innerHTML = '<tr><td colspan="5">লোড হচ্ছে...</td></tr>';
+
+            const { data, error } = await supabaseClient
                 .from('documents')
                 .select('*')
                 .order('id', { ascending: false });
 
             if (error) {
-                tableBody.innerHTML = `<tr><td colspan="5" style="text-align: center; color: red;">এরর: ${error.message}</td></tr>`;
+                tableBody.innerHTML = '<tr><td colspan="5" style="color:red;">ডাটা লোড করতে সমস্যা হয়েছে!</td></tr>';
                 return;
             }
 
-            if (!documents || documents.length === 0) {
-                tableBody.innerHTML = `<tr><td colspan="5" style="text-align: center;">কোনো ফাইল পাওয়া যায়নি।</td></tr>`;
+            if (!data || data.length === 0) {
+                tableBody.innerHTML = '<tr><td colspan="5">কোনো ফাইল পাওয়া যায়নি।</td></tr>';
                 return;
             }
 
-            tableBody.innerHTML = "";
-            documents.forEach(doc => {
+            tableBody.innerHTML = '';
+            data.forEach(doc => {
                 let fileCount = 1;
                 try {
                     const parsed = JSON.parse(doc.file_path);
                     if (Array.isArray(parsed)) fileCount = parsed.length;
-                } catch(e){}
+                } catch(e) {}
 
-                const row = document.createElement('tr');
-                row.innerHTML = `
-                    <td><b>${doc.file_name || 'N/A'}</b></td>
-                    <td><span class="pass-badge">${fileCount} টি ফাইল</span></td>
-                    <td><span class="pass-badge" style="color: #0066cc;">${doc.passcode || doc.password || 'N/A'}</span></td>
-                    <td><span class="pass-badge" style="color: #dc3545;">${doc.download_passcode || 'N/A'}</span></td>
+                // ইউজার পেজের ডাইনামিক লিংক জেনারেট
+                const userViewLink = `${window.location.origin}${window.location.pathname.replace('admin.html', 'index.html')}?file=${encodeURIComponent(doc.file_path)}`;
+
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td><strong>${doc.file_name}</strong></td>
+                    <td><span style="background: #e2e8f0; padding: 2px 8px; border-radius: 10px; font-size: 12px;">${fileCount} টি ফাইল</span></td>
+                    <td><span style="color: #007bff; font-weight: bold;">${doc.passcode}</span></td>
+                    <td><span style="color: #d9534f; font-weight: bold;">${doc.download_passcode || 'N/A'}</span></td>
                     <td>
-                        <button onclick="generateQRCode('${doc.file_path}')" class="action-btn btn-qr">📱 QR</button>
-                        <button onclick="editPasswords('${doc.id}', '${doc.passcode || doc.password || ''}', '${doc.download_passcode || ''}')" class="action-btn btn-edit">✏️ পাসওয়ার্ড</button>
-                        <button onclick="deleteFile('${doc.id}', '${doc.file_path}')" class="action-btn btn-delete">🗑️ ডিলিট</button>
+                        <button class="btn-action btn-view" onclick="previewAdminFile('${encodeURIComponent(doc.file_path)}')">👁️ দেখুন</button>
+                        <button class="btn-action btn-qr" onclick="showQRCode('${userViewLink}', '${doc.file_name}')">📱 QR</button>
+                        <button class="btn-action btn-share" onclick="shareLink('${userViewLink}', '${doc.file_name}')">🔗 শেয়ার</button>
+                        <button class="btn-action btn-delete" onclick="deleteDocument(${doc.id})">🗑️</button>
                     </td>
                 `;
-                tableBody.appendChild(row);
+                tableBody.appendChild(tr);
             });
         }
 
-        // ৪. ভিউ এবং ডাউনলোড দুটো পাসওয়ার্ডই এডিট করার ফাংশন
-        async function editPasswords(id, oldViewPass, oldDownPass) {
-            const newViewPass = prompt("নতুন 'ভিউ পাসওয়ার্ড' লিখুন:", oldViewPass);
-            if (newViewPass === null) return;
+        // 👁️ ১ চাপে পাসওয়ার্ড ছাড়াই অ্যাডমিন ফাইল দেখার ব্যবস্থা
+        function previewAdminFile(encodedPath) {
+            let fileList = [];
+            try {
+                fileList = JSON.parse(decodeURIComponent(encodedPath));
+                if (!Array.isArray(fileList)) fileList = [decodeURIComponent(encodedPath)];
+            } catch(e) {
+                fileList = [decodeURIComponent(encodedPath)];
+            }
 
-            const newDownPass = prompt("নতুন 'ডাউনলোড পাসওয়ার্ড' লিখুন:", oldDownPass);
-            if (newDownPass === null) return;
+            fileList.forEach(path => {
+                const { data } = supabaseClient.storage.from('documents').getPublicUrl(path);
+                if (data && data.publicUrl) {
+                    window.open(data.publicUrl, '_blank');
+                }
+            });
+        }
 
-            if (!supabaseClient) initSupabase();
+        // 📱 QR Code পপআপ দেখান
+        function showQRCode(link, fileName) {
+            document.getElementById('qrModalTitle').innerText = fileName;
+            const canvas = document.getElementById('qrcodeCanvas');
+            canvas.innerHTML = '';
+            
+            new QRCode(canvas, {
+                text: link,
+                width: 180,
+                height: 180
+            });
 
-            const { error } = await supabaseClient
-                .from('documents')
-                .update({ 
-                    passcode: newViewPass,
-                    password: newViewPass,
-                    download_passcode: newDownPass 
-                })
-                .eq('id', id);
+            document.getElementById('qrModal').style.display = 'flex';
+        }
 
-            if (error) {
-                alert("পাসওয়ার্ড আপডেট করতে সমস্যা: " + error.message);
+        function closeQRModal() {
+            document.getElementById('qrModal').style.display = 'none';
+        }
+
+        // 🔗 লিংক শেয়ার করা
+        async function shareLink(link, fileName) {
+            if (navigator.share) {
+                try {
+                    await navigator.share({
+                        title: fileName,
+                        text: `🔐 সিকিউর ফাইল লিংক: ${fileName}`,
+                        url: link
+                    });
+                } catch (err) {}
             } else {
-                alert("🎉 পাসওয়ার্ড সফলভাবে আপডেট করা হয়েছে!");
-                fetchFiles();
+                navigator.clipboard.writeText(link);
+                alert('🎉 সিকিউর ফাইল লিংকটি ক্লিপবোর্ডে কপি করা হয়েছে!');
             }
         }
 
-        // ৫. ফাইল ডিলিট ফাংশন
-        async function deleteFile(id, filePath) {
-            if (!confirm("আপনি কি নিশ্চিত যে এই ফাইলটি মুছে ফেলতে চান?")) return;
-
-            if (!supabaseClient) initSupabase();
-
-            if (filePath) {
-                try {
-                    const files = JSON.parse(filePath);
-                    if (Array.isArray(files)) {
-                        await supabaseClient.storage.from('documents').remove(files);
-                    } else {
-                        await supabaseClient.storage.from('documents').remove([filePath]);
-                    }
-                } catch(e) {
-                    await supabaseClient.storage.from('documents').remove([filePath]);
-                }
-            }
+        async function deleteDocument(id) {
+            if (!confirm("আপনি কি নিশ্চিত যে এই ফাইলটি ডিলিট করতে চান?")) return;
 
             const { error } = await supabaseClient
                 .from('documents')
@@ -351,18 +379,14 @@
             if (error) {
                 alert("ডিলিট করতে সমস্যা হয়েছে: " + error.message);
             } else {
-                alert("ফাইলটি সফলভাবে ডিলিট করা হয়েছে!");
-                fetchFiles();
+                alert("ফাইল সফলভাবে ডিলিট হয়েছে।");
+                loadUploadedFiles();
             }
         }
 
-        // 🔓 ৬. ব্লকড আইপি লিস্ট লোড এবং আনব্লক করার ফাংশনসমূহ
         async function loadBlockedIPs() {
-            if (!supabaseClient) initSupabase();
-            const container = document.getElementById('blockedListContainer');
-            if (!container) return;
-
-            container.innerHTML = `<p style="font-size: 13px; color: #666;">ব্লকড আইপি লোড হচ্ছে...</p>`;
+            const tableBody = document.getElementById('blockedIpTableBody');
+            tableBody.innerHTML = '<tr><td colspan="3">লোড হচ্ছে...</td></tr>';
 
             const { data, error } = await supabaseClient
                 .from('blocked_ips')
@@ -370,124 +394,57 @@
                 .order('id', { ascending: false });
 
             if (error) {
-                container.innerHTML = `<p style="color: red; font-size: 13px;">এরর: ${error.message}</p>`;
+                tableBody.innerHTML = '<tr><td colspan="3" style="color:red;">আইপি লোড করতে সমস্যা হয়েছে!</td></tr>';
                 return;
             }
 
             if (!data || data.length === 0) {
-                container.innerHTML = `<p style="font-size: 13px; color: #28a745;">✅ বর্তমানে কোনো আইপি ব্লক করা নেই।</p>`;
+                tableBody.innerHTML = '<tr><td colspan="3" style="color:green;">✅ বর্তমানে কোনো আইপি ব্লক করা নেই।</td></tr>';
                 return;
             }
 
-            let html = '<div style="display: flex; flex-direction: column; gap: 10px;">';
+            tableBody.innerHTML = '';
             data.forEach(item => {
-                html += `
-                    <div style="padding: 10px 15px; border: 1px solid #dc3545; background-color: #fff5f5; border-radius: 6px; display: flex; justify-content: space-between; align-items: center;">
-                        <div>
-                            <strong style="color: #dc3545;">🌐 IP: ${item.ip_address}</strong>
-                            <br><small style="color: #666;">ব্লক করার তারিখ: ${new Date(item.created_at || Date.now()).toLocaleString('bn-BD')}</small>
-                        </div>
-                        <button onclick="unblockIP('${item.ip_address}')" class="action-btn btn-view" style="padding: 6px 12px; font-weight: bold;">
-                            ✅ Unblock
-                        </button>
-                    </div>
+                const tr = document.createElement('tr');
+                
+                let expiry = "Permanent";
+                if (item.blocked_until) {
+                    expiry = new Date(item.blocked_until).toLocaleString('bn-BD');
+                }
+
+                tr.innerHTML = `
+                    <td><code>${item.ip_address}</code></td>
+                    <td>${expiry}</td>
+                    <td>
+                        <button onclick="unblockIP('${item.ip_address}')" style="background-color: #28a745; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer;">আনব্লক করুন</button>
+                    </td>
                 `;
+                tableBody.appendChild(tr);
             });
-            html += '</div>';
-            container.innerHTML = html;
         }
 
-        async function unblockIP(ipAddress) {
-            if (!confirm(`আপনি কি নিশ্চিত যে IP: ${ipAddress} আনব্লক করতে চান?`)) return;
-
-            if (!supabaseClient) initSupabase();
+        async function unblockIP(ip) {
+            if (!confirm(`আপনি কি ${ip} আইপিটি আনব্লক করতে চান?`)) return;
 
             const { error } = await supabaseClient
                 .from('blocked_ips')
                 .delete()
-                .eq('ip_address', ipAddress);
+                .eq('ip_address', ip);
 
-            if (!error) {
-                alert(`🎉 IP: ${ipAddress} সফলভাবে আনব্লক করা হয়েছে!`);
-                loadBlockedIPs();
+            if (error) {
+                alert("আনব্লক করতে সমস্যা হয়েছে: " + error.message);
             } else {
-                alert("❌ আনব্লক করতে সমস্যা হয়েছে: " + error.message);
+                alert("আইপি সফলভাবে আনব্লক করা হয়েছে।");
+                loadBlockedIPs();
             }
         }
 
-        // 🔔 ৭. রিয়েল-টাইম মনিটরিং ও লাইভ সাউন্ড অ্যালার্ট লিসেনার
-        function listenForRealtimeAlerts() {
-            if (!supabaseClient) initSupabase();
-
-            supabaseClient
-                .channel('schema-db-changes')
-                .on(
-                    'postgres_changes',
-                    {
-                        event: 'INSERT',
-                        schema: 'public',
-                        table: 'audit_logs'
-                    },
-                    (payload) => {
-                        const log = payload.new;
-                        playNotificationSound();
-                        showNotificationBanner(log);
-                    }
-                )
-                .subscribe();
-        }
-
-        // অ্যালার্ট সাউন্ড বাজানোর ফাংশন
-        function playNotificationSound() {
-            try {
-                const ctx = new (window.AudioContext || window.webkitAudioContext)();
-                const osc = ctx.createOscillator();
-                const gain = ctx.createGain();
-                osc.type = 'sine';
-                osc.frequency.setValueAtTime(800, ctx.currentTime);
-                gain.gain.setValueAtTime(0.3, ctx.currentTime);
-                osc.connect(gain);
-                gain.connect(ctx.destination);
-                osc.start();
-                osc.stop(ctx.currentTime + 0.3);
-            } catch(e) {}
-        }
-
-        // স্ক্রিনের ওপর অ্যালার্ট ব্যানার দেখানোর ফাংশন
-        function showNotificationBanner(log) {
-            let isWrongPass = log.action === 'WRONG_PASSWORD';
-            let bgColor = isWrongPass ? '#dc3545' : '#17a2b8';
-            let title = isWrongPass ? '🚨 ভুল পাসওয়ার্ড সতর্কতা!' : '👁️ নতুন ইউজার অ্যাক্টিভিটি';
-
-            const banner = document.createElement('div');
-            banner.style.cssText = `
-                position: fixed; top: 20px; right: 20px; z-index: 99999;
-                background-color: ${bgColor}; color: white; padding: 15px 20px;
-                border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.3);
-                font-family: sans-serif; font-size: 14px; max-width: 320px;
-            `;
-
-            banner.innerHTML = `
-                <strong>${title}</strong><br>
-                <small>📍 IP: ${log.ip_address || 'N/A'}</small><br>
-                <small>📄 ফাইল: ${log.file_name || 'N/A'}</small><br>
-                <small>📝 বিবরণ: ${log.details || log.action}</small>
-            `;
-
-            document.body.appendChild(banner);
-
-            setTimeout(() => {
-                banner.remove();
-            }, 5000);
-        }
-
-        // পেজ লোড হলেই স্বয়ংক্রিয়ভাবে সব সার্ভিস রান করবে
         window.addEventListener('DOMContentLoaded', () => {
             initSupabase();
-            generateAutoPasswords();
-            fetchFiles();
+            generateRandomPass();
+            loadUploadedFiles();
             loadBlockedIPs();
-            listenForRealtimeAlerts();
+            subscribeToAuditLogs();
         });
     </script>
 </body>
