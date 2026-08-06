@@ -8,4 +8,4 @@
 - JavaScript (ES6+)
 - Supabase (Authentication & Storage)
  
-# যোকোনো কাজে আপনার তথ্য কে সুরক্ষিত রাখুন
+# আপনার তথ্য কে সুরক্ষিত রাখুন 
