@@ -175,17 +175,22 @@
             z-index: 5;
         }
 
+        /* 🟢 ছোট সাইজ এবং ৩-৪ লাইনে সাজানো ওয়াটারমার্ক টেক্সট */
         .watermark-text {
-            color: rgba(255, 77, 77, 0.9);
-            font-size: 24px;
-            font-weight: 900;
-            transform: rotate(-25deg);
-            letter-spacing: 2px;
-            border: 3px dashed rgba(255, 77, 77, 0.9);
-            padding: 10px 20px;
-            border-radius: 10px;
-            text-shadow: 0 0 10px rgba(0, 0, 0, 0.7);
-            background: rgba(0, 0, 0, 0.4);
+            color: rgba(255, 77, 77, 0.95);
+            font-size: 14px;
+            font-weight: 800;
+            line-height: 1.4;
+            text-transform: uppercase;
+            text-align: center;
+            transform: rotate(-20deg);
+            letter-spacing: 1px;
+            border: 2px dashed rgba(255, 77, 77, 0.9);
+            padding: 10px 16px;
+            border-radius: 8px;
+            text-shadow: 0 0 8px rgba(0, 0, 0, 0.8);
+            background: rgba(0, 0, 0, 0.5);
+            max-width: 85%;
         }
 
         .file-preview { border-radius: 8px; overflow: hidden; max-height: 400px; margin-bottom: 10px; position: relative; }
@@ -568,9 +573,17 @@
                 fileDiv.className = 'file-item';
 
                 let previewHtml = '';
-                // ১টি পাসওয়ার্ড দিয়ে ঢুকলে ওয়াটারমার্ক ও হালকা ব্লার থাকবে, ২য় পাসওয়ার্ডে পুরো ক্লিয়ার থাকবে
+                // 🟢 ৪ লাইনের ওয়াটারমার্ক টেক্সট
                 const previewClass = isDownloadMode ? '' : 'file-preview-restricted';
-                const watermarkHtml = isDownloadMode ? '' : '<div class="watermark-overlay"><div class="watermark-text">🔒 PREVIEW ONLY</div></div>';
+                const watermarkHtml = isDownloadMode ? '' : `
+                    <div class="watermark-overlay">
+                        <div class="watermark-text">
+                            🔒 PREVIEW ONLY<br>
+                            UNAUTHORIZED COPYING PROHIBITED<br>
+                            PROTECTED DOCUMENT<br>
+                            DO NOT SHARE
+                        </div>
+                    </div>`;
 
                 if (['jpg', 'jpeg', 'png', 'webp', 'gif'].includes(ext)) {
                     previewHtml = `
