@@ -159,38 +159,40 @@
 
         /* 🌊 ভিউ মোডের ওয়াটারমার্ক ও হালকা ব্লার স্টাইল */
         .file-preview-restricted {
-            filter: blur(2px);
+            filter: blur(1px);
             pointer-events: none;
         }
 
+        /* 🌐 পুরো ছবি জুড়েই ছোট ছোট অস্পষ্ট লেখা রিপিট হওয়ার গ্রিড স্টাইল */
         .watermark-overlay {
             position: absolute;
             top: 0; left: 0; width: 100%; height: 100%;
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            grid-template-rows: repeat(4, 1fr);
+            gap: 12px;
+            padding: 10px;
+            pointer-events: none;
+            background: rgba(0, 0, 0, 0.25);
+            border-radius: 8px;
+            z-index: 5;
+            overflow: hidden;
+        }
+
+        /* 🟢 ছোট, হালকা এবং অস্পষ্ট টেক্সট স্টাইল */
+        .watermark-item {
             display: flex;
             justify-content: center;
             align-items: center;
-            pointer-events: none;
-            background: rgba(0, 0, 0, 0.35);
-            border-radius: 8px;
-            z-index: 5;
-        }
-
-        /* 🟢 ছোট সাইজ এবং ৩-৪ লাইনে সাজানো ওয়াটারমার্ক টেক্সট */
-        .watermark-text {
-            color: rgba(255, 77, 77, 0.95);
-            font-size: 14px;
-            font-weight: 800;
-            line-height: 1.4;
-            text-transform: uppercase;
             text-align: center;
-            transform: rotate(-20deg);
-            letter-spacing: 1px;
-            border: 2px dashed rgba(255, 77, 77, 0.9);
-            padding: 10px 16px;
-            border-radius: 8px;
-            text-shadow: 0 0 8px rgba(0, 0, 0, 0.8);
-            background: rgba(0, 0, 0, 0.5);
-            max-width: 85%;
+            color: rgba(255, 255, 255, 0.35); /* অস্পষ্ট করার জন্য অপাসিটি হালকা রাখা হয়েছে */
+            font-size: 10px;
+            font-weight: 700;
+            line-height: 1.3;
+            letter-spacing: 0.8px;
+            transform: rotate(-18deg);
+            text-shadow: 0 0 3px rgba(0, 0, 0, 0.9);
+            text-transform: uppercase;
         }
 
         .file-preview { border-radius: 8px; overflow: hidden; max-height: 400px; margin-bottom: 10px; position: relative; }
@@ -459,7 +461,7 @@
             const viewPass = String(currentDocumentData.passcode || currentDocumentData.password).trim();
             const downloadPass = String(currentDocumentData.download_passcode || '').trim();
 
-            // 🟢 পাসওয়ার্ড ২ (ডাউনলোড পাসওয়ার্ড) দিলে: ক্লিন ভিউ + ডাউনলোড মোড
+            // 🟢 পাসওয়ার্ড ২ (ডাউনলোড পাসওয়ার্ড) দিলে: ওয়াটারমার্কমুক্ত সম্পূর্ণ পরিস্কার ভিউ + ডাউনলোড মোড
             if (downloadPass && inputPass === downloadPass) {
                 isDownloadMode = true;
                 errorMsg.style.display = "none";
@@ -468,7 +470,7 @@
                 logActivity("DOWNLOAD_ACCESS_GRANTED", "পাসওয়ার্ড ২ দিয়ে ফুল ডাউনলোড এক্সেস লাভ করেছে।");
                 showFiles();
             }
-            // 🟡 পাসওয়ার্ড ১ (ভিউ পাসওয়ার্ড) দিলে: ওয়াটারমার্ক ভিউ (ডাউনলোড অপশন থাকবে না)
+            // 🟡 পাসওয়ার্ড ১ (ভিউ পাসওয়ার্ড) দিলে: হালকা অস্পষ্ট ওয়াটারমার্ক ভিউ (ডাউনলোড বাটন থাকবে না)
             else if (inputPass === viewPass) {
                 isDownloadMode = false;
                 errorMsg.style.display = "none";
@@ -573,17 +575,25 @@
                 fileDiv.className = 'file-item';
 
                 let previewHtml = '';
-                // 🟢 ৪ লাইনের ওয়াটারমার্ক টেক্সট
-                const previewClass = isDownloadMode ? '' : 'file-preview-restricted';
-                const watermarkHtml = isDownloadMode ? '' : `
-                    <div class="watermark-overlay">
-                        <div class="watermark-text">
-                            🔒 PREVIEW ONLY<br>
-                            UNAUTHORIZED COPYING PROHIBITED<br>
-                            PROTECTED DOCUMENT<br>
-                            DO NOT SHARE
-                        </div>
+                
+                // 🟢 ছোট ছোট ৩-৪ লাইনের কাস্টম টেক্সট ব্লক তৈরি
+                const textUnit = `
+                    <div class="watermark-item">
+                        🔒 PREVIEW ONLY<br>
+                        UNAUTHORIZED COPYING<br>
+                        PROTECTED FILE<br>
+                        DO NOT SHARE
                     </div>`;
+
+                // 🟢 পুরো পিকচারের ১২ জায়গায় লেখা ছড়িয়ে দেওয়া (Grid pattern)
+                const fullPageOverlay = `
+                    <div class="watermark-overlay">
+                        ${textUnit.repeat(12)}
+                    </div>`;
+
+                // পাসওয়ার্ড ১-এ হালকা ব্লার + পুরো পেজে ছোট অস্পষ্ট ওয়াটারমার্ক, পাসওয়ার্ড ২-এ ওয়াটারমার্ক আউট ও ১০০% ক্লিয়ার
+                const previewClass = isDownloadMode ? '' : 'file-preview-restricted';
+                const watermarkHtml = isDownloadMode ? '' : fullPageOverlay;
 
                 if (['jpg', 'jpeg', 'png', 'webp', 'gif'].includes(ext)) {
                     previewHtml = `
